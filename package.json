@@ -1,0 +1,22 @@
+{
+  "name": "library",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "\"%ProgramFiles%\\nodejs\\node.exe\" src/server.js",
+    "dev": "\"%ProgramFiles%\\nodejs\\node.exe\" src/server.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "lowdb": "^7.0.1",
+    "multer": "^2.0.2",
+    "nanoid": "^5.1.5"
+  }
+}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Image Library</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Image Library</h1>
+      <nav class="tabs">
+        <button class="tab active" data-tab="upload">Upload</button>
+        <button class="tab" data-tab="search">Search</button>
+      </nav>
+
+      <section id="tab-upload" class="tab-pane">
+        <div class="split">
+          <div class="left">
+            <div id="dropzone" class="dropzone" tabindex="0">
+              <div class="dz-inner">
+                <div class="dz-icon">⬆️</div>
+                <div class="dz-title">Drag & drop an image here</div>
+                <div class="dz-subtitle">or click to browse</div>
+                <img id="dzPreview" class="dz-preview hidden" alt="preview" />
+              </div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="panel">
+              <form id="uploadForm">
+                <input type="file" id="image" name="image" accept="image/*" hidden />
+                <div class="toolbar">
+                  <div class="tags-editor large">
+                    <div id="tagList" class="tag-list"></div>
+                    <input type="text" id="tagEditor" placeholder="Type a tag and press Tab" />
+                    <input type="hidden" id="tags" name="tags" />
+                  </div>
+                  <div class="toolbar-actions">
+                    <button id="uploadBtn" class="primary-btn" type="submit">Upload</button>
+                  </div>
+                </div>
+              </form>
+              <div id="uploadStatus" class="status"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-search" class="tab-pane hidden">
+        <div class="search-panel">
+          <div class="search-controls">
+            <div class="mode-toggle">
+              <button id="modeAnd" class="toggle active" data-mode="and">AND</button>
+              <button id="modeOr" class="toggle" data-mode="or">OR</button>
+            </div>
+            <div class="search-tags">
+              <div id="searchTagList" class="tag-list"></div>
+              <input type="text" id="searchTagEditor" placeholder="Type a tag and press Tab" />
+            </div>
+          </div>
+          <div class="search-bar">
+            <input type="text" id="query" placeholder="Keyword (optional)" />
+            <button id="searchBtn" class="secondary-btn">Search</button>
+          </div>
+          <div class="results-wrap">
+            <h2>Results</h2>
+            <div id="results" class="grid"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>
+
+
