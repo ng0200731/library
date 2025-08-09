@@ -1,3 +1,7 @@
+// Global variables for AI models - must be at top level
+var classificationModel = null;
+var detectionModel = null;
+
 async function fetchJSON(url, options) {
   const res = await fetch(url, options);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -264,11 +268,21 @@ window.analyzeImage = async function(imageId) {
       if (aiTagsContainer) {
         aiTagsContainer.innerHTML = '<span class="processing-indicator">Loading AI models...</span>';
       }
-      await loadAIModel();
+
+      try {
+        await loadAIModel();
+      } catch (loadError) {
+        throw new Error(`Model loading failed: ${loadError.message}`);
+      }
     }
 
-    if (!classificationModel || !detectionModel) {
-      throw new Error('Failed to load AI models');
+    // Double-check models are loaded
+    if (!classificationModel) {
+      throw new Error('Classification model failed to initialize');
+    }
+
+    if (!detectionModel) {
+      throw new Error('Detection model failed to initialize');
     }
 
     // Create image element for analysis
@@ -680,9 +694,7 @@ function showConfirmDialog(title, message, confirmText, onConfirm, cancelText = 
   confirmBtn.focus();
 }
 
-// Global variables for AI models
-let classificationModel = null;
-let detectionModel = null;
+// AI models are declared at the top of the file
 
 // Load AI models on page load
 async function loadAIModel() {
@@ -691,29 +703,37 @@ async function loadAIModel() {
 
     // Check if TensorFlow.js is loaded
     if (typeof tf === 'undefined') {
-      throw new Error('TensorFlow.js not loaded');
+      throw new Error('TensorFlow.js not loaded - check if script is included');
     }
 
     // Check if model libraries are loaded
     if (typeof mobilenet === 'undefined') {
-      throw new Error('MobileNet library not loaded');
+      throw new Error('MobileNet library not loaded - check if script is included');
     }
 
     if (typeof cocoSsd === 'undefined') {
-      throw new Error('COCO-SSD library not loaded');
+      throw new Error('COCO-SSD library not loaded - check if script is included');
     }
 
-    console.log('Loading MobileNet classification model...');
-    classificationModel = await mobilenet.load();
-    console.log('MobileNet loaded successfully');
+    // Initialize models if not already loaded
+    if (!classificationModel) {
+      console.log('Loading MobileNet classification model...');
+      classificationModel = await mobilenet.load();
+      console.log('MobileNet loaded successfully');
+    }
 
-    console.log('Loading COCO-SSD detection model...');
-    detectionModel = await cocoSsd.load();
-    console.log('COCO-SSD loaded successfully');
+    if (!detectionModel) {
+      console.log('Loading COCO-SSD detection model...');
+      detectionModel = await cocoSsd.load();
+      console.log('COCO-SSD loaded successfully');
+    }
 
-    console.log('All AI models loaded successfully');
+    console.log('All AI models ready');
+    return true;
   } catch (error) {
     console.error('Failed to load AI models:', error);
+    classificationModel = null;
+    detectionModel = null;
     throw error;
   }
 }
