@@ -15,6 +15,7 @@ const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('image');
 const uploadAllBtn = document.getElementById('uploadAllBtn');
 const aiAnalyzeAllBtn = document.getElementById('aiAnalyzeAllBtn');
+const advancedAiBtn = document.getElementById('advancedAiBtn');
 const clearAllImagesBtn = document.getElementById('clearAllImagesBtn');
 const imagesTable = document.getElementById('imagesTable');
 const imagesTableBody = document.getElementById('imagesTableBody');
@@ -134,6 +135,7 @@ function addImageToTable(file) {
     aiTags: [],
     manualTags: [],
     analyzed: false,
+    advancedAnalysis: null,
     preview: null
   };
 
@@ -180,8 +182,16 @@ function updateUploadButton() {
     const unanalyzed = selectedImages.filter(img => !img.analyzed).length;
     aiAnalyzeAllBtn.disabled = selectedImages.length === 0;
     aiAnalyzeAllBtn.textContent = unanalyzed > 0
-      ? `🤖 AI Analyze ${unanalyzed} Image${unanalyzed > 1 ? 's' : ''}`
-      : '🤖 All Analyzed';
+      ? `🤖 Basic Analysis (${unanalyzed})`
+      : '🤖 Basic Complete';
+  }
+
+  if (advancedAiBtn) {
+    const unanalyzedAdvanced = selectedImages.filter(img => !img.advancedAnalysis).length;
+    advancedAiBtn.disabled = selectedImages.length === 0;
+    advancedAiBtn.textContent = unanalyzedAdvanced > 0
+      ? `🧠 Advanced LLM (${unanalyzedAdvanced})`
+      : '🧠 Advanced Complete';
   }
 }
 
@@ -205,9 +215,38 @@ function renderImagesTable() {
         <div class="ai-tags" id="aiTags_${imageData.id}">
           ${imageData.analyzed ?
             imageData.aiTags.map(tag => `<span class="ai-tag">${tag}</span>`).join('') :
-            '<span class="processing-indicator">Click analyze to generate AI tags</span>'
+            '<span class="processing-indicator">Basic AI tags</span>'
           }
         </div>
+        ${imageData.advancedAnalysis ?
+          `<div class="advanced-analysis" id="advancedAnalysis_${imageData.id}">
+            <div class="analysis-section">
+              <div class="analysis-label">What it is:</div>
+              <div class="analysis-content">${imageData.advancedAnalysis.what_it_is}</div>
+            </div>
+            <div class="analysis-section">
+              <div class="analysis-label">Main colors:</div>
+              <div class="analysis-content">${imageData.advancedAnalysis.main_colors}</div>
+            </div>
+            <div class="analysis-section">
+              <div class="analysis-label">Background:</div>
+              <div class="analysis-content">${imageData.advancedAnalysis.background}</div>
+            </div>
+            <div class="analysis-section">
+              <div class="analysis-label">Atmosphere:</div>
+              <div class="analysis-content">${imageData.advancedAnalysis.atmosphere}</div>
+            </div>
+            <div class="analysis-section">
+              <div class="analysis-label">Impression:</div>
+              <div class="analysis-content">${imageData.advancedAnalysis.impression}</div>
+            </div>
+            <div class="analysis-section">
+              <div class="analysis-label">Style:</div>
+              <div class="analysis-content">${imageData.advancedAnalysis.style}</div>
+            </div>
+          </div>` :
+          `<div id="advancedAnalysisPlaceholder_${imageData.id}"></div>`
+        }
       </td>
       <td class="tags-cell">
         <input type="text" class="manual-tags-input"
@@ -219,7 +258,12 @@ function renderImagesTable() {
         <button class="table-btn analyze-btn"
                 onclick="analyzeImage('${imageData.id}')"
                 ${imageData.analyzed ? 'disabled' : ''}>
-          ${imageData.analyzed ? '✓ Done' : '🤖 Analyze'}
+          ${imageData.analyzed ? '✓ Basic' : '🤖 Basic'}
+        </button>
+        <button class="table-btn advanced-analyze-btn"
+                onclick="advancedAnalyzeImage('${imageData.id}')"
+                ${imageData.advancedAnalysis ? 'disabled' : ''}>
+          ${imageData.advancedAnalysis ? '✓ Advanced' : '🧠 Advanced'}
         </button>
         <button class="table-btn remove-btn" onclick="removeImage('${imageData.id}')">
           🗑️ Remove
@@ -360,6 +404,58 @@ window.updateManualTags = function(imageId, tagsString) {
   }
 };
 
+// Advanced AI analysis using LLM
+window.advancedAnalyzeImage = async function(imageId) {
+  const imageData = selectedImages.find(img => img.id === imageId);
+  if (!imageData || imageData.advancedAnalysis) return;
+
+  const analyzeBtn = document.querySelector(`button[onclick="advancedAnalyzeImage('${imageId}')"]`);
+  const placeholder = document.getElementById(`advancedAnalysisPlaceholder_${imageId}`);
+
+  if (analyzeBtn) {
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = '🧠 Analyzing...';
+    analyzeBtn.classList.add('analyzing');
+  }
+
+  if (placeholder) {
+    placeholder.innerHTML = '<div class="processing-indicator">🧠 Advanced AI analyzing image...</div>';
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('image', imageData.file);
+
+    const response = await fetch('/api/advanced-analyze', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    // Update image data
+    imageData.advancedAnalysis = result.analysis;
+
+    // Re-render the table to show the analysis
+    renderImagesTable();
+
+  } catch (error) {
+    console.error('Advanced AI Analysis error:', error);
+    if (placeholder) {
+      placeholder.innerHTML = `<div style="color: #ef4444; font-size: 11px;">Advanced analysis failed: ${error.message}</div>`;
+    }
+    if (analyzeBtn) {
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = '🧠 Retry';
+      analyzeBtn.classList.remove('analyzing');
+    }
+  }
+};
+
 // Generate tags from AI analysis
 function generateTagsFromAnalysis(detections, colorAnalysis, classifications) {
   const tags = [];
@@ -397,8 +493,18 @@ async function analyzeAllImages() {
   }
 }
 
+// Advanced analyze all images
+async function advancedAnalyzeAllImages() {
+  const unanalyzedImages = selectedImages.filter(img => !img.advancedAnalysis);
+
+  for (const imageData of unanalyzedImages) {
+    await window.advancedAnalyzeImage(imageData.id);
+  }
+}
+
 // Event listeners for new buttons
 aiAnalyzeAllBtn.addEventListener('click', analyzeAllImages);
+advancedAiBtn.addEventListener('click', advancedAnalyzeAllImages);
 
 clearAllImagesBtn.addEventListener('click', () => {
   if (selectedImages.length === 0) return;

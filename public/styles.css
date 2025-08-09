@@ -229,6 +229,37 @@ button:hover { background: #2563eb; }
   cursor: wait;
 }
 
+/* Advanced AI button styling */
+.advanced-ai-btn {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.advanced-ai-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857, #059669);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+.advanced-ai-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.advanced-ai-btn.loading {
+  background: linear-gradient(135deg, #6b7280, #9ca3af);
+  cursor: wait;
+}
+
 /* AI description display */
 .ai-description {
   margin-top: 12px;
@@ -448,6 +479,55 @@ td {
   color: #a855f7;
   font-size: 11px;
   font-style: italic;
+}
+
+/* Advanced AI analysis display */
+.advanced-analysis {
+  background: #0f172a;
+  border: 1px solid #059669;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.analysis-section {
+  margin-bottom: 8px;
+}
+
+.analysis-label {
+  color: #10b981;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.analysis-content {
+  color: #e5e7eb;
+  margin-left: 8px;
+}
+
+.advanced-analyze-btn {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-right: 4px;
+}
+
+.advanced-analyze-btn:hover {
+  background: linear-gradient(135deg, #047857, #059669);
+}
+
+.advanced-analyze-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 
