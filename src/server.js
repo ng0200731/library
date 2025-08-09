@@ -140,7 +140,7 @@ app.delete('/api/images/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-// Advanced AI Image Analysis using real vision LLM
+// Advanced AI Image Analysis using real vision LLM + basic AI context
 app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Image file is required' });
@@ -148,6 +148,10 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
     // Read the uploaded image file
     const imageBuffer = fs.readFileSync(req.file.path);
     const base64Image = imageBuffer.toString('base64');
+
+    // Get basic AI tags from request body if available
+    const basicTags = req.body.basicTags ? req.body.basicTags.split(',') : [];
+    console.log('Basic AI tags received:', basicTags);
 
     let analysis = null;
 
@@ -162,14 +166,14 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
           'Content-Type': 'application/octet-stream',
         },
         body: imageBuffer,
-        signal: AbortSignal.timeout(20000)
+        signal: AbortSignal.timeout(15000)
       });
 
       if (blipResponse.ok) {
         const blipResult = await blipResponse.json();
         if (blipResult && blipResult[0] && blipResult[0].generated_text) {
           const description = blipResult[0].generated_text;
-          analysis = parseDescriptionToStructured(description);
+          analysis = parseDescriptionToStructured(description, basicTags);
           console.log('BLIP-2 analysis successful:', description);
         }
       }
@@ -187,14 +191,14 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
             'Content-Type': 'application/octet-stream',
           },
           body: imageBuffer,
-          signal: AbortSignal.timeout(20000)
+          signal: AbortSignal.timeout(15000)
         });
 
         if (blipResponse.ok) {
           const blipResult = await blipResponse.json();
           if (blipResult && blipResult[0] && blipResult[0].generated_text) {
             const description = blipResult[0].generated_text;
-            analysis = parseDescriptionToStructured(description);
+            analysis = parseDescriptionToStructured(description, basicTags);
             console.log('BLIP analysis successful:', description);
           }
         }
@@ -203,36 +207,10 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
       }
     }
 
-    // Option 3: Try alternative vision model
+    // Fallback: Use basic AI tags + enhanced intelligent analysis
     if (!analysis) {
-      try {
-        console.log('Trying alternative vision model...');
-        const altResponse = await fetch('https://api-inference.huggingface.co/models/nlpconnect/vit-gpt2-image-captioning', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/octet-stream',
-          },
-          body: imageBuffer,
-          signal: AbortSignal.timeout(20000)
-        });
-
-        if (altResponse.ok) {
-          const altResult = await altResponse.json();
-          if (altResult && altResult[0] && altResult[0].generated_text) {
-            const description = altResult[0].generated_text;
-            analysis = parseDescriptionToStructured(description);
-            console.log('Alternative model analysis successful:', description);
-          }
-        }
-      } catch (altError) {
-        console.log('Alternative model failed:', altError.message);
-      }
-    }
-
-    // Fallback: Enhanced intelligent analysis if all APIs fail
-    if (!analysis) {
-      console.log('All vision APIs failed, using enhanced fallback...');
-      analysis = generateEnhancedAnalysis(req.file.originalname, imageBuffer);
+      console.log('Vision APIs failed, using basic AI + enhanced analysis...');
+      analysis = generateEnhancedAnalysisWithBasicAI(req.file.originalname, imageBuffer, basicTags);
     }
 
     // Clean up the temporary file
@@ -250,8 +228,9 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
       try { fs.unlinkSync(req.file.path); } catch {}
     }
 
-    // Provide a meaningful fallback analysis
-    const fallbackAnalysis = generateEnhancedAnalysis('unknown.jpg', null);
+    // Provide a meaningful fallback analysis using basic AI if available
+    const basicTags = req.body.basicTags ? req.body.basicTags.split(',') : [];
+    const fallbackAnalysis = generateEnhancedAnalysisWithBasicAI('unknown.jpg', null, basicTags);
 
     res.json({
       analysis: fallbackAnalysis,
@@ -261,8 +240,9 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
 });
 
 // Parse AI-generated description into structured format
-function parseDescriptionToStructured(description) {
+function parseDescriptionToStructured(description, basicTags = []) {
   console.log('Parsing description:', description);
+  console.log('Using basic AI tags:', basicTags);
 
   // Extract key information from the AI description
   const lowerDesc = description.toLowerCase();
@@ -273,10 +253,12 @@ function parseDescriptionToStructured(description) {
     whatItIs = description.substring(description.toLowerCase().indexOf('a ') + 2);
   }
 
-  // Extract colors mentioned
+  // Extract colors mentioned (combine from description and basic AI)
   const colorWords = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'brown', 'black', 'white', 'gray', 'grey', 'silver', 'gold', 'golden', 'dark', 'light', 'bright'];
   const foundColors = colorWords.filter(color => lowerDesc.includes(color));
-  const mainColors = foundColors.length > 0 ? foundColors.slice(0, 3).join(', ') : 'natural tones';
+  const basicColors = basicTags.filter(tag => colorWords.includes(tag.toLowerCase()));
+  const allColors = [...new Set([...foundColors, ...basicColors])];
+  const mainColors = allColors.length > 0 ? allColors.slice(0, 3).join(', ') : 'natural tones';
 
   // Determine background
   let background = 'indoor setting';
@@ -452,6 +434,136 @@ function generateEnhancedAnalysis(filename, imageBuffer = null) {
     impression: 'Compelling visual narrative with artistic merit',
     style: 'Contemporary digital photography with professional composition',
     source: 'enhanced_default_analysis'
+  };
+}
+
+// Enhanced analysis that combines basic AI results with intelligent analysis
+function generateEnhancedAnalysisWithBasicAI(filename, imageBuffer, basicTags = []) {
+  console.log('Generating enhanced analysis with basic AI tags:', basicTags);
+
+  const name = filename.toLowerCase();
+  const tags = basicTags.map(tag => tag.toLowerCase());
+
+  // Determine what it is based on basic AI tags
+  let whatItIs = 'Visual subject';
+  let category = 'general';
+
+  if (tags.includes('person') || tags.includes('man') || tags.includes('woman') || tags.includes('child')) {
+    whatItIs = 'Human portrait or person';
+    category = 'portrait';
+  } else if (tags.includes('car') || tags.includes('vehicle') || tags.includes('truck') || tags.includes('motorcycle')) {
+    whatItIs = 'Motor vehicle or transportation device';
+    category = 'automotive';
+  } else if (tags.includes('cat') || tags.includes('dog') || tags.includes('animal') || tags.includes('bird')) {
+    whatItIs = 'Animal or pet';
+    category = 'animal';
+  } else if (tags.includes('food') || tags.includes('meal') || tags.includes('dish')) {
+    whatItIs = 'Food or culinary creation';
+    category = 'food';
+  } else if (tags.includes('building') || tags.includes('house') || tags.includes('architecture')) {
+    whatItIs = 'Architectural structure';
+    category = 'architecture';
+  } else if (tags.includes('flower') || tags.includes('tree') || tags.includes('plant') || tags.includes('nature')) {
+    whatItIs = 'Natural subject or botanical element';
+    category = 'nature';
+  }
+
+  // Extract colors from basic AI tags
+  const colorWords = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'brown', 'black', 'white', 'gray', 'grey', 'silver', 'gold'];
+  const detectedColors = tags.filter(tag => colorWords.includes(tag));
+  const backgroundColors = tags.filter(tag => tag.includes('background'));
+
+  // Generate sophisticated descriptions based on category and detected elements
+  const categoryDescriptions = {
+    portrait: {
+      main_colors: detectedColors.length > 0 ?
+        `Natural skin tones with ${detectedColors.join(', ')} accents` :
+        'Natural skin tones with complementary color palette',
+      background: backgroundColors.length > 0 ?
+        `Professional ${backgroundColors[0].replace(' background', '')} backdrop` :
+        'Carefully composed portrait setting',
+      atmosphere: 'Intimate and expressive with emotional depth',
+      impression: 'Captures human character and individual personality',
+      style: 'Professional portrait photography'
+    },
+    automotive: {
+      main_colors: detectedColors.length > 0 ?
+        `Automotive ${detectedColors.join(' and ')} with metallic finishes` :
+        'Metallic automotive colors with chrome accents',
+      background: backgroundColors.length > 0 ?
+        `${backgroundColors[0].replace(' background', '').charAt(0).toUpperCase() + backgroundColors[0].replace(' background', '').slice(1)} automotive environment` :
+        'Urban or automotive setting',
+      atmosphere: 'Dynamic energy with mechanical precision',
+      impression: 'Modern transportation and engineering excellence',
+      style: 'Automotive photography'
+    },
+    animal: {
+      main_colors: detectedColors.length > 0 ?
+        `Natural ${detectedColors.join(' and ')} fur or feather tones` :
+        'Natural animal coloring with organic tones',
+      background: backgroundColors.length > 0 ?
+        `${backgroundColors[0].replace(' background', '').charAt(0).toUpperCase() + backgroundColors[0].replace(' background', '').slice(1)} natural environment` :
+        'Natural habitat or comfortable setting',
+      atmosphere: 'Warm, lively, and full of natural energy',
+      impression: 'Natural beauty and animal character',
+      style: 'Wildlife or pet photography'
+    },
+    food: {
+      main_colors: detectedColors.length > 0 ?
+        `Appetizing ${detectedColors.join(', ')} with rich culinary tones` :
+        'Rich culinary colors with appetizing presentation',
+      background: backgroundColors.length > 0 ?
+        `${backgroundColors[0].replace(' background', '').charAt(0).toUpperCase() + backgroundColors[0].replace(' background', '').slice(1)} culinary setting` :
+        'Professional kitchen or dining presentation',
+      atmosphere: 'Inviting warmth with mouth-watering appeal',
+      impression: 'Gastronomic artistry and culinary craftsmanship',
+      style: 'Professional food photography'
+    },
+    architecture: {
+      main_colors: detectedColors.length > 0 ?
+        `Architectural ${detectedColors.join(' and ')} with structural elements` :
+        'Architectural materials with structural color palette',
+      background: backgroundColors.length > 0 ?
+        `${backgroundColors[0].replace(' background', '').charAt(0).toUpperCase() + backgroundColors[0].replace(' background', '').slice(1)} urban context` :
+        'Urban or architectural environment',
+      atmosphere: 'Modern sophistication with geometric precision',
+      impression: 'Human achievement in design and construction',
+      style: 'Architectural photography'
+    },
+    nature: {
+      main_colors: detectedColors.length > 0 ?
+        `Natural ${detectedColors.join(' and ')} with organic earth tones` :
+        'Natural earth tones with organic color harmony',
+      background: backgroundColors.length > 0 ?
+        `${backgroundColors[0].replace(' background', '').charAt(0).toUpperCase() + backgroundColors[0].replace(' background', '').slice(1)} natural setting` :
+        'Natural outdoor environment',
+      atmosphere: 'Serene tranquility with natural beauty',
+      impression: 'Connection to nature and environmental harmony',
+      style: 'Nature or landscape photography'
+    },
+    general: {
+      main_colors: detectedColors.length > 0 ?
+        `Prominent ${detectedColors.join(', ')} with balanced color composition` :
+        'Balanced color palette with visual harmony',
+      background: backgroundColors.length > 0 ?
+        `${backgroundColors[0].replace(' background', '').charAt(0).toUpperCase() + backgroundColors[0].replace(' background', '').slice(1)} compositional setting` :
+        'Thoughtfully composed visual environment',
+      atmosphere: 'Engaging visual mood with purposeful presentation',
+      impression: 'Compelling visual narrative with artistic merit',
+      style: 'Contemporary digital photography'
+    }
+  };
+
+  const desc = categoryDescriptions[category];
+
+  return {
+    what_it_is: whatItIs,
+    main_colors: desc.main_colors,
+    background: desc.background,
+    atmosphere: desc.atmosphere,
+    impression: desc.impression,
+    style: desc.style,
+    source: 'enhanced_ai_combined_analysis'
   };
 }
 

@@ -426,6 +426,11 @@ window.advancedAnalyzeImage = async function(imageId) {
     const formData = new FormData();
     formData.append('image', imageData.file);
 
+    // Include basic AI tags if available
+    if (imageData.aiTags && imageData.aiTags.length > 0) {
+      formData.append('basicTags', imageData.aiTags.join(','));
+    }
+
     const response = await fetch('/api/advanced-analyze', {
       method: 'POST',
       body: formData
