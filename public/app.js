@@ -238,23 +238,10 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Update manual tags for an image
-function updateManualTags(imageId, tagsString) {
-  const imageData = selectedImages.find(img => img.id === imageId);
-  if (imageData) {
-    imageData.manualTags = tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-  }
-}
+// These functions are now defined as window.functionName above for global access
 
-// Remove image from table
-function removeImage(imageId) {
-  selectedImages = selectedImages.filter(img => img.id !== imageId);
-  renderImagesTable();
-  updateDropzonePreview();
-}
-
-// Analyze single image
-async function analyzeImage(imageId) {
+// Make functions global so they can be called from HTML onclick
+window.analyzeImage = async function(imageId) {
   const imageData = selectedImages.find(img => img.id === imageId);
   if (!imageData || imageData.analyzed) return;
 
@@ -274,7 +261,14 @@ async function analyzeImage(imageId) {
   try {
     // Load models if not already loaded
     if (!classificationModel || !detectionModel) {
+      if (aiTagsContainer) {
+        aiTagsContainer.innerHTML = '<span class="processing-indicator">Loading AI models...</span>';
+      }
       await loadAIModel();
+    }
+
+    if (!classificationModel || !detectionModel) {
+      throw new Error('Failed to load AI models');
     }
 
     // Create image element for analysis
@@ -285,11 +279,26 @@ async function analyzeImage(imageId) {
     await new Promise((resolve, reject) => {
       img.onload = resolve;
       img.onerror = reject;
+      setTimeout(() => reject(new Error('Image load timeout')), 10000);
     });
+
+    if (aiTagsContainer) {
+      aiTagsContainer.innerHTML = '<span class="processing-indicator">Detecting objects...</span>';
+    }
 
     // Perform AI analysis
     const detections = await detectionModel.detect(img);
+
+    if (aiTagsContainer) {
+      aiTagsContainer.innerHTML = '<span class="processing-indicator">Analyzing colors...</span>';
+    }
+
     const colorAnalysis = await analyzeImageColors(img);
+
+    if (aiTagsContainer) {
+      aiTagsContainer.innerHTML = '<span class="processing-indicator">Classifying scene...</span>';
+    }
+
     const classifications = await classificationModel.classify(img);
 
     // Generate tags from analysis
@@ -312,7 +321,7 @@ async function analyzeImage(imageId) {
   } catch (error) {
     console.error('AI Analysis error:', error);
     if (aiTagsContainer) {
-      aiTagsContainer.innerHTML = '<span style="color: #ef4444;">Analysis failed</span>';
+      aiTagsContainer.innerHTML = `<span style="color: #ef4444;">Analysis failed: ${error.message}</span>`;
     }
     if (analyzeBtn) {
       analyzeBtn.disabled = false;
@@ -322,7 +331,20 @@ async function analyzeImage(imageId) {
   }
 
   updateUploadButton();
-}
+};
+
+window.removeImage = function(imageId) {
+  selectedImages = selectedImages.filter(img => img.id !== imageId);
+  renderImagesTable();
+  updateDropzonePreview();
+};
+
+window.updateManualTags = function(imageId, tagsString) {
+  const imageData = selectedImages.find(img => img.id === imageId);
+  if (imageData) {
+    imageData.manualTags = tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+  }
+};
 
 // Generate tags from AI analysis
 function generateTagsFromAnalysis(detections, colorAnalysis, classifications) {
@@ -357,7 +379,7 @@ async function analyzeAllImages() {
   const unanalyzedImages = selectedImages.filter(img => !img.analyzed);
 
   for (const imageData of unanalyzedImages) {
-    await analyzeImage(imageData.id);
+    await window.analyzeImage(imageData.id);
   }
 }
 
@@ -666,11 +688,33 @@ let detectionModel = null;
 async function loadAIModel() {
   try {
     console.log('Loading AI vision models...');
+
+    // Check if TensorFlow.js is loaded
+    if (typeof tf === 'undefined') {
+      throw new Error('TensorFlow.js not loaded');
+    }
+
+    // Check if model libraries are loaded
+    if (typeof mobilenet === 'undefined') {
+      throw new Error('MobileNet library not loaded');
+    }
+
+    if (typeof cocoSsd === 'undefined') {
+      throw new Error('COCO-SSD library not loaded');
+    }
+
+    console.log('Loading MobileNet classification model...');
     classificationModel = await mobilenet.load();
+    console.log('MobileNet loaded successfully');
+
+    console.log('Loading COCO-SSD detection model...');
     detectionModel = await cocoSsd.load();
-    console.log('AI models loaded successfully');
+    console.log('COCO-SSD loaded successfully');
+
+    console.log('All AI models loaded successfully');
   } catch (error) {
     console.error('Failed to load AI models:', error);
+    throw error;
   }
 }
 
