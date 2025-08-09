@@ -452,19 +452,27 @@ function generateEnhancedAnalysis(filename, imageBuffer = null) {
 
 // Enhanced analysis that combines basic AI results with intelligent analysis
 function generateEnhancedAnalysisWithBasicAI(filename, imageBuffer, basicTags = []) {
-  console.log('Generating enhanced analysis with basic AI tags:', basicTags);
+  console.log('=== ENHANCED ANALYSIS DEBUG ===');
+  console.log('Filename:', filename);
+  console.log('Basic AI tags received:', basicTags);
+  console.log('Tags type:', typeof basicTags);
+  console.log('Tags length:', basicTags.length);
 
   const name = filename.toLowerCase();
   const tags = basicTags.map(tag => tag.toLowerCase());
 
+  console.log('Processed tags:', tags);
+
   // Determine what it is based on basic AI tags with much more specificity
-  let whatItIs = 'Unidentified visual content';
+  let whatItIs = 'FALLBACK: Unidentified visual content';
   let category = 'general';
 
-  console.log('Analyzing tags for category:', tags);
+  console.log('Starting category analysis...');
 
   // Much more detailed object detection with specific descriptions
+  console.log('Checking for person tags...');
   if (tags.includes('person') || tags.includes('man') || tags.includes('woman') || tags.includes('child') || tags.includes('people')) {
+    console.log('FOUND PERSON CATEGORY!');
     if (tags.includes('child') || tags.includes('baby')) {
       whatItIs = 'Child or young person in portrait setting';
     } else if (tags.includes('man')) {
@@ -476,6 +484,7 @@ function generateEnhancedAnalysisWithBasicAI(filename, imageBuffer, basicTags = 
     }
     category = 'portrait';
   } else if (tags.includes('car') || tags.includes('vehicle') || tags.includes('truck') || tags.includes('motorcycle') || tags.includes('scooter')) {
+    console.log('FOUND AUTOMOTIVE CATEGORY!');
     if (tags.includes('car')) {
       whatItIs = 'Automobile showcasing automotive design and engineering';
     } else if (tags.includes('motorcycle') || tags.includes('scooter')) {
@@ -536,6 +545,9 @@ function generateEnhancedAnalysisWithBasicAI(filename, imageBuffer, basicTags = 
     whatItIs = 'Functional tool or equipment designed for specific purpose';
     category = 'tool';
   } else {
+    console.log('NO SPECIFIC CATEGORY FOUND - trying filename and tag analysis...');
+    console.log('Available tags for analysis:', tags);
+
     // Try to infer from filename if no clear tags
     const nameLower = name.toLowerCase();
     if (nameLower.includes('portrait') || nameLower.includes('selfie') || nameLower.includes('photo')) {
@@ -547,11 +559,31 @@ function generateEnhancedAnalysisWithBasicAI(filename, imageBuffer, basicTags = 
     } else if (nameLower.includes('product') || nameLower.includes('item')) {
       whatItIs = 'Product or object presented for documentation or display';
       category = 'product';
+    } else if (tags.length > 0) {
+      // Use the first meaningful tag as the subject
+      const meaningfulTags = tags.filter(tag =>
+        !tag.includes('background') &&
+        !['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'brown', 'black', 'white', 'gray', 'grey', 'silver', 'gold'].includes(tag)
+      );
+
+      if (meaningfulTags.length > 0) {
+        const mainSubject = meaningfulTags[0];
+        whatItIs = `${mainSubject.charAt(0).toUpperCase() + mainSubject.slice(1)} captured with professional attention to detail and composition`;
+        console.log('Using main subject from tags:', mainSubject);
+      } else {
+        whatItIs = `Visual composition featuring ${tags.slice(0, 2).join(' and ')} elements`;
+        console.log('Using color/background tags as fallback');
+      }
+      category = 'general';
     } else {
       whatItIs = 'Distinctive visual subject with unique characteristics and composition';
       category = 'general';
+      console.log('FINAL FALLBACK - no tags or filename clues');
     }
   }
+
+  console.log('FINAL RESULT - What it is:', whatItIs);
+  console.log('FINAL RESULT - Category:', category);
 
   // Extract colors from basic AI tags
   const colorWords = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'brown', 'black', 'white', 'gray', 'grey', 'silver', 'gold'];

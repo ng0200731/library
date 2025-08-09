@@ -422,13 +422,37 @@ window.advancedAnalyzeImage = async function(imageId) {
     placeholder.innerHTML = '<div class="processing-indicator">🧠 Advanced AI analyzing image...</div>';
   }
 
+  // IMPORTANT: Run basic AI analysis first if not already done
+  if (!imageData.analyzed || !imageData.aiTags || imageData.aiTags.length === 0) {
+    console.log('Basic AI not done yet - running it first...');
+    if (placeholder) {
+      placeholder.innerHTML = '<div class="processing-indicator">🤖 Running basic AI analysis first...</div>';
+    }
+
+    try {
+      await window.analyzeImage(imageId);
+      console.log('Basic AI completed, tags:', imageData.aiTags);
+    } catch (error) {
+      console.error('Basic AI failed:', error);
+    }
+  }
+
   try {
     const formData = new FormData();
     formData.append('image', imageData.file);
 
     // Include basic AI tags if available
+    console.log('=== FRONTEND DEBUG ===');
+    console.log('Image data:', imageData);
+    console.log('AI tags available:', imageData.aiTags);
+    console.log('AI tags length:', imageData.aiTags ? imageData.aiTags.length : 'undefined');
+
     if (imageData.aiTags && imageData.aiTags.length > 0) {
-      formData.append('basicTags', imageData.aiTags.join(','));
+      const tagsString = imageData.aiTags.join(',');
+      console.log('Sending basic tags to server:', tagsString);
+      formData.append('basicTags', tagsString);
+    } else {
+      console.log('NO BASIC AI TAGS AVAILABLE - this might be the problem!');
     }
 
     const response = await fetch('/api/advanced-analyze', {
