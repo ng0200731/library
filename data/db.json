@@ -167,6 +167,31 @@
         "gray background"
       ],
       "createdAt": "2025-08-09T14:53:30.352Z"
+    },
+    {
+      "id": "UekgvXWZ1B2l",
+      "filename": "1754751425055-3PpRBTkx.jpg",
+      "originalName": "10028.jpg",
+      "url": "/uploads/1754751425055-3PpRBTkx.jpg",
+      "tags": [
+        "frisbee",
+        "silver",
+        "pink",
+        "silver background"
+      ],
+      "createdAt": "2025-08-09T14:57:05.065Z"
+    },
+    {
+      "id": "7puCZGwxXmYz",
+      "filename": "1754751439921-w-jJiLeZ.jpg",
+      "originalName": "10026.jpg",
+      "url": "/uploads/1754751439921-w-jJiLeZ.jpg",
+      "tags": [
+        "brown",
+        "maroon",
+        "brown background"
+      ],
+      "createdAt": "2025-08-09T14:57:19.924Z"
     }
   ],
   "tags": [
@@ -197,6 +222,12 @@
     "hairy",
     "person",
     "silver",
-    "gray background"
+    "gray background",
+    "frisbee",
+    "pink",
+    "silver background",
+    "brown",
+    "maroon",
+    "brown background"
   ]
 }

@@ -9,17 +9,17 @@ const uploadStatus = document.getElementById('uploadStatus');
 const results = document.getElementById('results');
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('image');
-const uploadBtn = document.getElementById('uploadBtn');
+const uploadAllBtn = document.getElementById('uploadAllBtn');
+const aiAnalyzeAllBtn = document.getElementById('aiAnalyzeAllBtn');
+const clearAllImagesBtn = document.getElementById('clearAllImagesBtn');
+const imagesTable = document.getElementById('imagesTable');
+const imagesTableBody = document.getElementById('imagesTableBody');
 const dzPreview = document.getElementById('dzPreview');
-const tagList = document.getElementById('tagList');
-const tagEditor = document.getElementById('tagEditor');
-const tagsHidden = document.getElementById('tags');
 const deleteAllBtn = document.getElementById('deleteAllBtn');
-const clearUploadTagsBtn = document.getElementById('clearUploadTagsBtn');
-const aiDescribeBtn = document.getElementById('aiDescribeBtn');
-const aiDescription = document.getElementById('aiDescription');
-const aiDescriptionText = document.getElementById('aiDescriptionText');
-let tags = [];
+
+// Global state for multiple images
+let selectedImages = [];
+let imageCounter = 0;
 
 // Search tag inputs and mode
 const searchTagList = document.getElementById('searchTagList');
@@ -30,29 +30,16 @@ const clearSearchTagsBtn = document.getElementById('clearSearchTagsBtn');
 let searchTags = [];
 let searchMode = 'and';
 
-function resetUploadUI(opts = {}) {
-  const { keepPreview = false } = opts;
-  // Reset tags and editor
-  tags = [];
-  renderTags();
-  if (tagEditor) tagEditor.value = '';
-  if (tagsHidden) tagsHidden.value = '';
-  // Reset status and AI description
+function resetUploadUI() {
+  selectedImages = [];
+  imageCounter = 0;
   if (uploadStatus) uploadStatus.textContent = '';
-  if (aiDescription) aiDescription.classList.remove('show');
-  if (aiDescriptionText) aiDescriptionText.textContent = '';
-  // Reset AI button state
-  if (aiDescribeBtn) {
-    aiDescribeBtn.disabled = false;
-    aiDescribeBtn.classList.remove('loading');
-    aiDescribeBtn.innerHTML = '🤖 AI Describe';
-  }
-  // Reset preview and input unless we want to keep the just-dropped preview
-  if (!keepPreview) {
-    if (dzPreview) { dzPreview.classList.add('hidden'); dzPreview.src = ''; }
-    if (dropzone) dropzone.classList.remove('has-preview');
-    if (fileInput) fileInput.value = '';
-  }
+  if (dzPreview) { dzPreview.classList.add('hidden'); dzPreview.src = ''; }
+  if (dropzone) dropzone.classList.remove('has-preview');
+  if (fileInput) fileInput.value = '';
+  if (imagesTable) imagesTable.classList.add('hidden');
+  if (imagesTableBody) imagesTableBody.innerHTML = '';
+  updateUploadButton();
 }
 
 // Tabs
@@ -74,14 +61,11 @@ tabs.forEach((t) => t.addEventListener('click', () => {
 
 uploadForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  uploadStatus.textContent = '';
-  const selected = fileInput.files && fileInput.files[0];
-  if (selected) {
-    showUploadConfirmation(selected);
-  } else {
-    // No file yet: prompt user to pick one; change handler will auto-upload
+  if (selectedImages.length === 0) {
     fileInput.click();
+    return;
   }
+  showBatchUploadConfirmation();
 });
 
 // Global prevent default to avoid opening files in browser
@@ -107,108 +91,292 @@ uploadForm.addEventListener('submit', (e) => {
 dropzone.addEventListener('drop', async (e) => {
   const files = e.dataTransfer && e.dataTransfer.files;
   if (!files || files.length === 0) return;
-  const file = files[0];
-  // Reset all fields for a fresh upload flow but keep the forthcoming preview
-  resetUploadUI({ keepPreview: true });
-  // Try to set the input if supported, but don't rely on it
-  try {
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    fileInput.files = dt.files;
-  } catch {}
-  onFileSelected(file);
+
+  // Handle multiple files
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.type.startsWith('image/')) {
+      addImageToTable(file);
+    }
+  }
+
+  updateDropzonePreview();
 });
+
 dropzone.addEventListener('click', () => { fileInput.click(); });
 
 fileInput.addEventListener('change', () => {
-  const file = fileInput.files && fileInput.files[0];
-  if (file) {
-    // Reset all fields for a fresh upload flow but keep the forthcoming preview
-    resetUploadUI({ keepPreview: true });
-    onFileSelected(file);
+  const files = fileInput.files;
+  if (files && files.length > 0) {
+    // Handle multiple files
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/')) {
+        addImageToTable(file);
+      }
+    }
+    updateDropzonePreview();
   }
 });
 
-function onFileSelected(file) {
-  // Only show preview in the dropzone; no filename line
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      dzPreview.src = reader.result;
-      dzPreview.classList.remove('hidden');
-      dropzone.classList.add('has-preview');
-    };
-    reader.readAsDataURL(file);
+// Add image to the table
+function addImageToTable(file) {
+  const imageId = `img_${++imageCounter}`;
+  const imageData = {
+    id: imageId,
+    file: file,
+    filename: file.name,
+    size: file.size,
+    aiTags: [],
+    manualTags: [],
+    analyzed: false,
+    preview: null
+  };
+
+  selectedImages.push(imageData);
+
+  // Create preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imageData.preview = e.target.result;
+    renderImagesTable();
+  };
+  reader.readAsDataURL(file);
+}
+
+// Update dropzone preview to show multiple files
+function updateDropzonePreview() {
+  if (selectedImages.length === 0) {
+    dzPreview.classList.add('hidden');
+    dropzone.classList.remove('has-preview');
+    imagesTable.classList.add('hidden');
+  } else if (selectedImages.length === 1 && selectedImages[0].preview) {
+    dzPreview.src = selectedImages[0].preview;
+    dzPreview.classList.remove('hidden');
+    dropzone.classList.add('has-preview');
+    imagesTable.classList.remove('hidden');
   } else {
     dzPreview.classList.add('hidden');
-    dzPreview.src = '';
     dropzone.classList.remove('has-preview');
+    imagesTable.classList.remove('hidden');
   }
-  // Note: upload will be triggered by caller with explicit file parameter
+  updateUploadButton();
 }
 
-async function uploadSelectedFile(file) {
-  const fileFromInput = fileInput.files && fileInput.files[0];
-  const effectiveFile = file || fileFromInput;
-  const isImage = effectiveFile && effectiveFile.type && effectiveFile.type.startsWith('image/');
-  if (!isImage) {
-    uploadStatus.textContent = 'Please choose an image file';
-    return;
+// Update upload button state
+function updateUploadButton() {
+  if (uploadAllBtn) {
+    uploadAllBtn.disabled = selectedImages.length === 0;
+    uploadAllBtn.textContent = selectedImages.length > 0
+      ? `📤 Upload ${selectedImages.length} Image${selectedImages.length > 1 ? 's' : ''} to Library`
+      : '📤 Upload All to Library';
   }
-  const fileToSend = effectiveFile;
-  if (!effectiveFile) return;
-  const tagsInput = document.getElementById('tags');
-  uploadStatus.textContent = 'Uploading...';
-  const form = new FormData();
-  form.append('image', fileToSend);
-  if (tags.length) form.append('tags', tags.join(','));
+
+  if (aiAnalyzeAllBtn) {
+    const unanalyzed = selectedImages.filter(img => !img.analyzed).length;
+    aiAnalyzeAllBtn.disabled = selectedImages.length === 0;
+    aiAnalyzeAllBtn.textContent = unanalyzed > 0
+      ? `🤖 AI Analyze ${unanalyzed} Image${unanalyzed > 1 ? 's' : ''}`
+      : '🤖 All Analyzed';
+  }
+}
+
+// Render the images table
+function renderImagesTable() {
+  if (!imagesTableBody) return;
+
+  imagesTableBody.innerHTML = '';
+
+  selectedImages.forEach((imageData, index) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>
+        <img src="${imageData.preview || ''}" alt="${imageData.filename}" class="image-preview" />
+      </td>
+      <td class="filename-cell">
+        <div title="${imageData.filename}">${imageData.filename}</div>
+        <div style="font-size: 10px; color: #9ca3af;">${formatFileSize(imageData.size)}</div>
+      </td>
+      <td class="tags-cell">
+        <div class="ai-tags" id="aiTags_${imageData.id}">
+          ${imageData.analyzed ?
+            imageData.aiTags.map(tag => `<span class="ai-tag">${tag}</span>`).join('') :
+            '<span class="processing-indicator">Click analyze to generate AI tags</span>'
+          }
+        </div>
+      </td>
+      <td class="tags-cell">
+        <input type="text" class="manual-tags-input"
+               placeholder="Add manual tags (comma separated)"
+               value="${imageData.manualTags.join(', ')}"
+               onchange="updateManualTags('${imageData.id}', this.value)" />
+      </td>
+      <td class="table-actions-cell">
+        <button class="table-btn analyze-btn"
+                onclick="analyzeImage('${imageData.id}')"
+                ${imageData.analyzed ? 'disabled' : ''}>
+          ${imageData.analyzed ? '✓ Done' : '🤖 Analyze'}
+        </button>
+        <button class="table-btn remove-btn" onclick="removeImage('${imageData.id}')">
+          🗑️ Remove
+        </button>
+      </td>
+    `;
+
+    imagesTableBody.appendChild(row);
+  });
+
+  updateUploadButton();
+}
+
+// Format file size
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Update manual tags for an image
+function updateManualTags(imageId, tagsString) {
+  const imageData = selectedImages.find(img => img.id === imageId);
+  if (imageData) {
+    imageData.manualTags = tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+  }
+}
+
+// Remove image from table
+function removeImage(imageId) {
+  selectedImages = selectedImages.filter(img => img.id !== imageId);
+  renderImagesTable();
+  updateDropzonePreview();
+}
+
+// Analyze single image
+async function analyzeImage(imageId) {
+  const imageData = selectedImages.find(img => img.id === imageId);
+  if (!imageData || imageData.analyzed) return;
+
+  const analyzeBtn = document.querySelector(`button[onclick="analyzeImage('${imageId}')"]`);
+  const aiTagsContainer = document.getElementById(`aiTags_${imageId}`);
+
+  if (analyzeBtn) {
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = '🤖 Analyzing...';
+    analyzeBtn.classList.add('analyzing');
+  }
+
+  if (aiTagsContainer) {
+    aiTagsContainer.innerHTML = '<span class="processing-indicator">Analyzing image...</span>';
+  }
+
   try {
-    await fetchJSON('/api/images', { method: 'POST', body: form });
-    uploadStatus.textContent = 'Uploaded!';
-    // Reset all fields after successful upload (including preview)
-    resetUploadUI({ keepPreview: false });
-    await search();
-  } catch (e) {
-    uploadStatus.textContent = 'Upload failed';
-  }
-}
+    // Load models if not already loaded
+    if (!classificationModel || !detectionModel) {
+      await loadAIModel();
+    }
 
-// Tag editor: type then press Tab to add
-tagEditor.addEventListener('keydown', (e) => {
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    const value = tagEditor.value.trim();
-    if (value && !tags.includes(value)) {
-      tags.push(value);
-      tagEditor.value = '';
-      renderTags();
+    // Create image element for analysis
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = imageData.preview;
+
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+
+    // Perform AI analysis
+    const detections = await detectionModel.detect(img);
+    const colorAnalysis = await analyzeImageColors(img);
+    const classifications = await classificationModel.classify(img);
+
+    // Generate tags from analysis
+    const aiTags = generateTagsFromAnalysis(detections, colorAnalysis, classifications);
+
+    // Update image data
+    imageData.aiTags = aiTags;
+    imageData.analyzed = true;
+
+    // Update UI
+    if (aiTagsContainer) {
+      aiTagsContainer.innerHTML = aiTags.map(tag => `<span class="ai-tag">${tag}</span>`).join('');
+    }
+
+    if (analyzeBtn) {
+      analyzeBtn.textContent = '✓ Done';
+      analyzeBtn.classList.remove('analyzing');
+    }
+
+  } catch (error) {
+    console.error('AI Analysis error:', error);
+    if (aiTagsContainer) {
+      aiTagsContainer.innerHTML = '<span style="color: #ef4444;">Analysis failed</span>';
+    }
+    if (analyzeBtn) {
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = '🤖 Retry';
+      analyzeBtn.classList.remove('analyzing');
     }
   }
-});
-tagEditor.addEventListener('blur', () => {
-  const value = tagEditor.value.trim();
-  if (value && !tags.includes(value)) {
-    tags.push(value);
-    tagEditor.value = '';
-    renderTags();
-  }
-});
 
-function renderTags() {
-  tagsHidden.value = tags.join(',');
-  tagList.innerHTML = '';
-  for (const t of tags) {
-    const el = document.createElement('span');
-    el.className = 'tag pill';
-    el.textContent = t;
-    el.title = 'Click to remove';
-    el.addEventListener('click', () => {
-      tags = tags.filter((x) => x !== t);
-      renderTags();
+  updateUploadButton();
+}
+
+// Generate tags from AI analysis
+function generateTagsFromAnalysis(detections, colorAnalysis, classifications) {
+  const tags = [];
+
+  // Add main objects
+  if (detections && detections.length > 0) {
+    detections.slice(0, 2).forEach(detection => {
+      tags.push(detection.class.toLowerCase());
     });
-    tagList.appendChild(el);
+  }
+
+  // Add dominant colors
+  if (colorAnalysis.dominant && colorAnalysis.dominant.length > 0) {
+    colorAnalysis.dominant.slice(0, 2).forEach(color => {
+      if (color !== 'unknown') {
+        tags.push(color);
+      }
+    });
+  }
+
+  // Add background color
+  if (colorAnalysis.background && colorAnalysis.background !== 'unknown') {
+    tags.push(`${colorAnalysis.background} background`);
+  }
+
+  return [...new Set(tags)]; // Remove duplicates
+}
+
+// Analyze all images
+async function analyzeAllImages() {
+  const unanalyzedImages = selectedImages.filter(img => !img.analyzed);
+
+  for (const imageData of unanalyzedImages) {
+    await analyzeImage(imageData.id);
   }
 }
+
+// Event listeners for new buttons
+aiAnalyzeAllBtn.addEventListener('click', analyzeAllImages);
+
+clearAllImagesBtn.addEventListener('click', () => {
+  if (selectedImages.length === 0) return;
+
+  showConfirmDialog(
+    'Clear All Images',
+    `Remove all ${selectedImages.length} selected image(s)?`,
+    'Clear All',
+    () => {
+      resetUploadUI();
+    },
+    'Cancel'
+  );
+});
 
 function renderSearchTags() {
   searchTagList.innerHTML = '';
@@ -343,18 +511,69 @@ clearSearchTagsBtn.addEventListener('click', () => {
   );
 });
 
-// Upload confirmation dialog
-function showUploadConfirmation(file) {
-  const tagText = tags.length > 0 ? `\nTags: ${tags.join(', ')}` : '\nNo tags';
-  const message = `Upload "${file.name}"?${tagText}\n\n💡 To delete tags: Click on any tag to remove it`;
+// Batch upload confirmation dialog
+function showBatchUploadConfirmation() {
+  const totalImages = selectedImages.length;
+  const analyzedImages = selectedImages.filter(img => img.analyzed).length;
+  const unanalyzedImages = totalImages - analyzedImages;
+
+  let message = `Upload ${totalImages} image(s) to library?\n\n`;
+  message += `📊 Analysis Status:\n`;
+  message += `✅ Analyzed: ${analyzedImages}\n`;
+  if (unanalyzedImages > 0) {
+    message += `⏳ Not analyzed: ${unanalyzedImages}\n\n`;
+    message += `💡 Tip: Analyze images first to get AI-generated tags`;
+  }
 
   showConfirmDialog(
-    'Confirm Upload',
+    'Batch Upload Confirmation',
     message,
-    'Upload',
-    () => uploadSelectedFile(file),
+    'Upload All',
+    () => uploadAllImages(),
     'Cancel'
   );
+}
+
+// Upload all images
+async function uploadAllImages() {
+  uploadStatus.textContent = 'Uploading images...';
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < selectedImages.length; i++) {
+    const imageData = selectedImages[i];
+    uploadStatus.textContent = `Uploading ${i + 1}/${selectedImages.length}: ${imageData.filename}`;
+
+    try {
+      const formData = new FormData();
+      formData.append('image', imageData.file);
+
+      // Combine AI tags and manual tags
+      const allTags = [...imageData.aiTags, ...imageData.manualTags];
+      if (allTags.length > 0) {
+        formData.append('tags', allTags.join(','));
+      }
+
+      await fetchJSON('/api/images', { method: 'POST', body: formData });
+      successCount++;
+    } catch (error) {
+      console.error(`Failed to upload ${imageData.filename}:`, error);
+      failCount++;
+    }
+  }
+
+  // Show results
+  if (failCount === 0) {
+    uploadStatus.textContent = `✅ Successfully uploaded ${successCount} image(s)!`;
+  } else {
+    uploadStatus.textContent = `⚠️ Uploaded ${successCount}, failed ${failCount} image(s)`;
+  }
+
+  // Reset and refresh
+  setTimeout(() => {
+    resetUploadUI();
+    search();
+  }, 2000);
 }
 
 // Delete all confirmation
@@ -455,103 +674,7 @@ async function loadAIModel() {
   }
 }
 
-// AI Describe functionality with detailed visual analysis
-aiDescribeBtn.addEventListener('click', async () => {
-  const file = fileInput.files && fileInput.files[0];
-  if (!file) {
-    alert('Please select an image first');
-    return;
-  }
-
-  if (!file.type.startsWith('image/')) {
-    alert('Please select a valid image file');
-    return;
-  }
-
-  // Start timing
-  const startTime = performance.now();
-  let modelLoadTime = 0;
-  let analysisTime = 0;
-
-  // Update button state
-  aiDescribeBtn.disabled = true;
-  aiDescribeBtn.classList.add('loading');
-  aiDescribeBtn.innerHTML = '🤖 Analyzing...';
-
-  // Hide previous description
-  aiDescription.classList.remove('show');
-
-  try {
-    // Load models if not already loaded
-    if (!classificationModel || !detectionModel) {
-      const modelLoadStart = performance.now();
-      aiDescribeBtn.innerHTML = '🤖 Loading AI Models...';
-      await loadAIModel();
-      modelLoadTime = performance.now() - modelLoadStart;
-    }
-
-    if (!classificationModel || !detectionModel) {
-      throw new Error('AI models failed to load');
-    }
-
-    // Create image element for analysis
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
-    const imageLoadPromise = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
-
-    // Load image from file
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-
-    await imageLoadPromise;
-
-    // Perform comprehensive image analysis
-    const analysisStart = performance.now();
-
-    aiDescribeBtn.innerHTML = '🤖 Detecting Objects...';
-    const detections = await detectionModel.detect(img);
-
-    aiDescribeBtn.innerHTML = '🤖 Analyzing Colors...';
-    const colorAnalysis = await analyzeImageColors(img);
-
-    aiDescribeBtn.innerHTML = '🤖 Classifying Scene...';
-    const classifications = await classificationModel.classify(img);
-
-    analysisTime = performance.now() - analysisStart;
-
-    // Generate comprehensive description
-    const description = generateDetailedDescription(detections, colorAnalysis, classifications);
-
-    // Calculate total time and costs
-    const totalTime = performance.now() - startTime;
-    const costs = calculateAICosts(detections, colorAnalysis, classifications, totalTime);
-
-    // Display the AI description with timing and cost info
-    const fullDescription = `${description}\n\n⏱️ Processing: ${totalTime.toFixed(0)}ms${modelLoadTime > 0 ? ` (${modelLoadTime.toFixed(0)}ms model loading)` : ''}\n💰 Equivalent Cloud Cost: $${costs.total} (${costs.breakdown})\n🆓 Actual Cost: FREE (client-side processing)\n📊 Tokens Used: ${costs.tokens}`;
-    aiDescriptionText.textContent = fullDescription;
-    aiDescription.classList.add('show');
-
-    // Auto-add relevant tags
-    addRelevantTags(detections, colorAnalysis);
-
-  } catch (error) {
-    console.error('AI Description error:', error);
-    aiDescriptionText.textContent = 'AI analysis failed. Please try again or check your internet connection.';
-    aiDescription.classList.add('show');
-  } finally {
-    // Reset button state
-    aiDescribeBtn.disabled = false;
-    aiDescribeBtn.classList.remove('loading');
-    aiDescribeBtn.innerHTML = '🤖 AI Describe';
-  }
-});
+// Note: AI analysis is now handled per-image in the table interface
 
 // Analyze image colors using canvas
 async function analyzeImageColors(img) {

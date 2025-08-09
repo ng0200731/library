@@ -29,27 +29,38 @@
           <div class="right">
             <div class="panel">
               <form id="uploadForm">
-                <input type="file" id="image" name="image" accept="image/*" hidden />
-                <div class="toolbar">
-                  <div class="tags-editor large">
-                    <div class="tag-help">💡 Use Tab to add tags. Click tags to remove them.</div>
-                    <div class="tag-input-row">
-                      <div id="tagList" class="tag-list"></div>
-                      <input type="text" id="tagEditor" placeholder="Type a tag and press Tab" />
-                      <button id="clearUploadTagsBtn" class="clear-btn" type="button" title="Clear all tags">Clear All</button>
-                    </div>
-                    <input type="hidden" id="tags" name="tags" />
-                  </div>
-                  <div class="toolbar-actions">
-                    <button id="aiDescribeBtn" class="ai-btn" type="button">🤖 AI Describe</button>
-                    <button id="uploadBtn" class="primary-btn" type="submit">Upload</button>
-                  </div>
+                <input type="file" id="image" name="image" accept="image/*" multiple hidden />
+                <div class="upload-actions">
+                  <button id="aiAnalyzeAllBtn" class="ai-btn" type="button">🤖 AI Analyze All</button>
+                  <button id="uploadAllBtn" class="primary-btn big-btn" type="submit">📤 Upload All to Library</button>
                 </div>
               </form>
-              <div id="aiDescription" class="ai-description">
-                <div class="ai-label">🤖 AI Description:</div>
-                <div class="ai-text" id="aiDescriptionText"></div>
+
+              <!-- Multiple Images Table -->
+              <div id="imagesTable" class="images-table hidden">
+                <div class="table-header">
+                  <h3>Selected Images</h3>
+                  <div class="table-actions">
+                    <button id="clearAllImagesBtn" class="clear-btn">Clear All</button>
+                  </div>
+                </div>
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Preview</th>
+                        <th>Filename</th>
+                        <th>AI Generated Tags</th>
+                        <th>Manual Tags</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="imagesTableBody">
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
               <div id="uploadStatus" class="status"></div>
             </div>
           </div>
