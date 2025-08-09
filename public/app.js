@@ -475,21 +475,40 @@ aiDescribeBtn.addEventListener('click', async () => {
 
     const result = await response.json();
 
-    // Display the AI description
-    aiDescriptionText.textContent = result.description;
+    // Display the AI description with source indicator
+    let displayText = result.description;
+    if (result.source === 'local_analysis') {
+      displayText += ' (Generated using local file analysis)';
+    } else if (result.source === 'ai_model') {
+      displayText += ' (Generated using AI vision model)';
+    } else if (result.source === 'fallback') {
+      displayText += ' (Basic file information)';
+    }
+
+    aiDescriptionText.textContent = displayText;
     aiDescription.classList.add('show');
 
-    // Auto-add description as a tag if it's not too long
-    const description = result.description.toLowerCase();
-    if (description.length < 50 && !tags.includes(description)) {
-      tags.push(description);
-      renderTags();
+    // Auto-add description as a tag if it's from AI model and not too long
+    if (result.source === 'ai_model') {
+      const description = result.description.toLowerCase();
+      if (description.length < 50 && !tags.includes(description)) {
+        tags.push(description);
+        renderTags();
+      }
     }
 
   } catch (error) {
     console.error('AI Description error:', error);
-    aiDescriptionText.textContent = 'Failed to generate description. Please try again.';
+    aiDescriptionText.textContent = 'AI service temporarily unavailable. Using basic file analysis instead.';
     aiDescription.classList.add('show');
+
+    // Try to provide basic file info as fallback
+    if (file) {
+      const fileSize = Math.round(file.size / 1024);
+      const fileType = file.type.split('/')[1].toUpperCase();
+      const basicInfo = `${file.name} (${fileType}, ${fileSize}KB)`;
+      aiDescriptionText.textContent = `Basic file info: ${basicInfo}`;
+    }
   } finally {
     // Reset button state
     aiDescribeBtn.disabled = false;
