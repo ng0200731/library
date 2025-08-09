@@ -110,6 +110,50 @@
         "white background"
       ],
       "createdAt": "2025-08-08T17:03:33.268Z"
+    },
+    {
+      "id": "t1EmRd0ejpPF",
+      "filename": "1754747217835-m34JKYan.jpg",
+      "originalName": "10007.jpg",
+      "url": "/uploads/1754747217835-m34JKYan.jpg",
+      "tags": [],
+      "createdAt": "2025-08-09T13:46:57.879Z"
+    },
+    {
+      "id": "F4Djfukqby_b",
+      "filename": "1754747869906-zxvdS2Hl.jpg",
+      "originalName": "10016.jpg",
+      "url": "/uploads/1754747869906-zxvdS2Hl.jpg",
+      "tags": [
+        "eye",
+        "kissing",
+        "hair"
+      ],
+      "createdAt": "2025-08-09T13:57:49.916Z"
+    },
+    {
+      "id": "5EbvMR6LZAhT",
+      "filename": "1754748895671-4wR21_K2.jpg",
+      "originalName": "10018.jpg",
+      "url": "/uploads/1754748895671-4wR21_K2.jpg",
+      "tags": [
+        "bicycle",
+        "sun",
+        "woman"
+      ],
+      "createdAt": "2025-08-09T14:14:55.673Z"
+    },
+    {
+      "id": "bpoKxbf7C7MQ",
+      "filename": "1754749142734-nypp0beS.jpg",
+      "originalName": "10063.jpg",
+      "url": "/uploads/1754749142734-nypp0beS.jpg",
+      "tags": [
+        "doll",
+        "chicken",
+        "hairy"
+      ],
+      "createdAt": "2025-08-09T14:19:02.736Z"
     }
   ],
   "tags": [
@@ -130,6 +174,13 @@
     "color",
     "black",
     "cat",
-    "white background"
+    "white background",
+    "kissing",
+    "hair",
+    "bicycle",
+    "sun",
+    "doll",
+    "chicken",
+    "hairy"
   ]
 }

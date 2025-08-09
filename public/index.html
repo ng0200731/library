@@ -32,8 +32,12 @@
                 <input type="file" id="image" name="image" accept="image/*" hidden />
                 <div class="toolbar">
                   <div class="tags-editor large">
-                    <div id="tagList" class="tag-list"></div>
-                    <input type="text" id="tagEditor" placeholder="Type a tag and press Tab" />
+                    <div class="tag-help">💡 Use Tab to add tags. Click tags to remove them.</div>
+                    <div class="tag-input-row">
+                      <div id="tagList" class="tag-list"></div>
+                      <input type="text" id="tagEditor" placeholder="Type a tag and press Tab" />
+                      <button id="clearUploadTagsBtn" class="clear-btn" type="button" title="Clear all tags">Clear All</button>
+                    </div>
                     <input type="hidden" id="tags" name="tags" />
                   </div>
                   <div class="toolbar-actions">
@@ -53,18 +57,19 @@
             <div class="mode-toggle">
               <button id="modeAnd" class="toggle active" data-mode="and">AND</button>
               <button id="modeOr" class="toggle" data-mode="or">OR</button>
+              <div class="mode-help">💡 Use Tab to add tags. Click tags to remove them.</div>
             </div>
             <div class="search-tags">
               <div id="searchTagList" class="tag-list"></div>
               <input type="text" id="searchTagEditor" placeholder="Type a tag and press Tab" />
+              <button id="clearSearchTagsBtn" class="clear-btn" type="button" title="Clear all tags">Clear All</button>
             </div>
           </div>
-          <div class="search-bar">
-            <input type="text" id="query" placeholder="Keyword (optional)" />
-            <button id="searchBtn" class="secondary-btn">Search</button>
-          </div>
           <div class="results-wrap">
-            <h2>Results</h2>
+            <div class="results-header">
+              <h2>Results</h2>
+              <button id="deleteAllBtn" class="danger-btn">Delete All</button>
+            </div>
             <div id="results" class="grid"></div>
           </div>
         </div>

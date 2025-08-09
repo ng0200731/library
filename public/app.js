@@ -7,8 +7,6 @@ async function fetchJSON(url, options) {
 const uploadForm = document.getElementById('uploadForm');
 const uploadStatus = document.getElementById('uploadStatus');
 const results = document.getElementById('results');
-const queryInput = document.getElementById('query');
-const searchBtn = document.getElementById('searchBtn');
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('image');
 const uploadBtn = document.getElementById('uploadBtn');
@@ -16,6 +14,8 @@ const dzPreview = document.getElementById('dzPreview');
 const tagList = document.getElementById('tagList');
 const tagEditor = document.getElementById('tagEditor');
 const tagsHidden = document.getElementById('tags');
+const deleteAllBtn = document.getElementById('deleteAllBtn');
+const clearUploadTagsBtn = document.getElementById('clearUploadTagsBtn');
 let tags = [];
 
 // Search tag inputs and mode
@@ -23,6 +23,7 @@ const searchTagList = document.getElementById('searchTagList');
 const searchTagEditor = document.getElementById('searchTagEditor');
 const modeAndBtn = document.getElementById('modeAnd');
 const modeOrBtn = document.getElementById('modeOr');
+const clearSearchTagsBtn = document.getElementById('clearSearchTagsBtn');
 let searchTags = [];
 let searchMode = 'and';
 
@@ -65,7 +66,7 @@ uploadForm.addEventListener('submit', (e) => {
   uploadStatus.textContent = '';
   const selected = fileInput.files && fileInput.files[0];
   if (selected) {
-    uploadSelectedFile(selected);
+    showUploadConfirmation(selected);
   } else {
     // No file yet: prompt user to pick one; change handler will auto-upload
     fileInput.click();
@@ -215,9 +216,7 @@ function renderSearchTags() {
 }
 
 async function search() {
-  const q = queryInput.value.trim();
   const params = new URLSearchParams();
-  if (q) params.set('q', q);
   if (searchTags.length) {
     params.set('tags', searchTags.join(','));
     params.set('mode', searchMode);
@@ -262,14 +261,7 @@ results.addEventListener('click', async (e) => {
   }
 });
 
-searchBtn.addEventListener('click', search);
-// Debounced search on typing
-let searchTimer;
-queryInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(search, 300);
-});
-queryInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+// Remove the search button and keyword input event listeners since we removed them
 
 // Search tag editor: press Tab/blur to add
 searchTagEditor.addEventListener('keydown', (e) => {
@@ -303,6 +295,138 @@ function setMode(m) {
 }
 modeAndBtn.addEventListener('click', () => setMode('and'));
 modeOrBtn.addEventListener('click', () => setMode('or'));
+
+// Clear buttons functionality
+clearUploadTagsBtn.addEventListener('click', () => {
+  if (tags.length === 0) return;
+
+  const message = `Clear all ${tags.length} tag(s)?`;
+
+  showConfirmDialog(
+    'Clear Upload Tags',
+    message,
+    'Clear All',
+    () => {
+      tags = [];
+      renderTags();
+    },
+    'Cancel'
+  );
+});
+
+clearSearchTagsBtn.addEventListener('click', () => {
+  if (searchTags.length === 0) return;
+
+  const message = `Clear all ${searchTags.length} search tag(s)?`;
+
+  showConfirmDialog(
+    'Clear Search Tags',
+    message,
+    'Clear All',
+    () => {
+      searchTags = [];
+      renderSearchTags();
+      search();
+    },
+    'Cancel'
+  );
+});
+
+// Upload confirmation dialog
+function showUploadConfirmation(file) {
+  const tagText = tags.length > 0 ? `\nTags: ${tags.join(', ')}` : '\nNo tags';
+  const message = `Upload "${file.name}"?${tagText}\n\n💡 To delete tags: Click on any tag to remove it`;
+
+  showConfirmDialog(
+    'Confirm Upload',
+    message,
+    'Upload',
+    () => uploadSelectedFile(file),
+    'Cancel'
+  );
+}
+
+// Delete all confirmation
+deleteAllBtn.addEventListener('click', async () => {
+  const data = await fetchJSON('/api/images');
+  const count = data.images.length;
+
+  if (count === 0) {
+    alert('No images to delete');
+    return;
+  }
+
+  const message = `Delete all ${count} image(s)?\n\nThis action cannot be undone.`;
+
+  showConfirmDialog(
+    'Delete All Images',
+    message,
+    'Delete All',
+    async () => {
+      try {
+        // Delete all images one by one
+        for (const img of data.images) {
+          await fetch(`/api/images/${img.id}`, { method: 'DELETE' });
+        }
+        await search();
+      } catch (err) {
+        alert('Failed to delete some images');
+      }
+    },
+    'Cancel'
+  );
+});
+
+// Generic confirmation dialog
+function showConfirmDialog(title, message, confirmText, onConfirm, cancelText = 'Cancel') {
+  // Create dialog elements
+  const dialog = document.createElement('div');
+  dialog.className = 'confirm-dialog';
+
+  dialog.innerHTML = `
+    <div class="confirm-content">
+      <div class="confirm-title">${title}</div>
+      <div class="confirm-message">${message.replace(/\n/g, '<br>')}</div>
+      <div class="confirm-actions">
+        <button class="confirm-btn secondary cancel-btn">${cancelText}</button>
+        <button class="confirm-btn primary confirm-btn-action">${confirmText}</button>
+      </div>
+    </div>
+  `;
+
+  // Add event listeners
+  const cancelBtn = dialog.querySelector('.cancel-btn');
+  const confirmBtn = dialog.querySelector('.confirm-btn-action');
+
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(dialog);
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    document.body.removeChild(dialog);
+    onConfirm();
+  });
+
+  // Close on background click
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      document.body.removeChild(dialog);
+    }
+  });
+
+  // Close on Escape key
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      document.body.removeChild(dialog);
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+
+  // Show dialog
+  document.body.appendChild(dialog);
+  confirmBtn.focus();
+}
 
 // Initial load
 search();
