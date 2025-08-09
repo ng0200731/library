@@ -1128,8 +1128,23 @@ function addRelevantTags(detections, colorAnalysis) {
   renderTags();
 }
 
+// Load and display version
+async function loadVersion() {
+  try {
+    const response = await fetch('/api/version');
+    const data = await response.json();
+    const versionBadge = document.getElementById('versionBadge');
+    if (versionBadge && data.version) {
+      versionBadge.textContent = `v${data.version}`;
+    }
+  } catch (error) {
+    console.log('Could not load version:', error);
+  }
+}
+
 // Initial load
 search();
+loadVersion();
 
 // Load AI model in background
 loadAIModel();

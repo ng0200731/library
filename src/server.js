@@ -11,6 +11,10 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Load package.json for version info
+const packageJsonPath = path.join(__dirname, '..', 'package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -42,6 +46,15 @@ const upload = multer({ storage });
 
 app.use('/uploads', express.static(uploadsDir));
 app.use('/', express.static(publicDir));
+
+// Get version information
+app.get('/api/version', (req, res) => {
+  res.json({
+    version: packageJson.version,
+    name: packageJson.name,
+    description: packageJson.description
+  });
+});
 
 // Upload image with optional tags
 app.post('/api/images', upload.single('image'), async (req, res) => {
@@ -444,28 +457,100 @@ function generateEnhancedAnalysisWithBasicAI(filename, imageBuffer, basicTags = 
   const name = filename.toLowerCase();
   const tags = basicTags.map(tag => tag.toLowerCase());
 
-  // Determine what it is based on basic AI tags
-  let whatItIs = 'Visual subject';
+  // Determine what it is based on basic AI tags with much more specificity
+  let whatItIs = 'Unidentified visual content';
   let category = 'general';
 
-  if (tags.includes('person') || tags.includes('man') || tags.includes('woman') || tags.includes('child')) {
-    whatItIs = 'Human portrait or person';
+  console.log('Analyzing tags for category:', tags);
+
+  // Much more detailed object detection with specific descriptions
+  if (tags.includes('person') || tags.includes('man') || tags.includes('woman') || tags.includes('child') || tags.includes('people')) {
+    if (tags.includes('child') || tags.includes('baby')) {
+      whatItIs = 'Child or young person in portrait setting';
+    } else if (tags.includes('man')) {
+      whatItIs = 'Male subject in professional or casual portrait';
+    } else if (tags.includes('woman')) {
+      whatItIs = 'Female subject captured in portrait composition';
+    } else {
+      whatItIs = 'Human subject in thoughtful portrait arrangement';
+    }
     category = 'portrait';
-  } else if (tags.includes('car') || tags.includes('vehicle') || tags.includes('truck') || tags.includes('motorcycle')) {
-    whatItIs = 'Motor vehicle or transportation device';
+  } else if (tags.includes('car') || tags.includes('vehicle') || tags.includes('truck') || tags.includes('motorcycle') || tags.includes('scooter')) {
+    if (tags.includes('car')) {
+      whatItIs = 'Automobile showcasing automotive design and engineering';
+    } else if (tags.includes('motorcycle') || tags.includes('scooter')) {
+      whatItIs = 'Two-wheeled motor vehicle with dynamic presence';
+    } else if (tags.includes('truck')) {
+      whatItIs = 'Commercial or utility vehicle with robust construction';
+    } else {
+      whatItIs = 'Transportation vehicle demonstrating mechanical craftsmanship';
+    }
     category = 'automotive';
-  } else if (tags.includes('cat') || tags.includes('dog') || tags.includes('animal') || tags.includes('bird')) {
-    whatItIs = 'Animal or pet';
+  } else if (tags.includes('cat') || tags.includes('dog') || tags.includes('animal') || tags.includes('bird') || tags.includes('pet')) {
+    if (tags.includes('cat')) {
+      whatItIs = 'Feline companion displaying natural grace and character';
+    } else if (tags.includes('dog')) {
+      whatItIs = 'Canine friend showing loyalty and spirited personality';
+    } else if (tags.includes('bird')) {
+      whatItIs = 'Avian creature captured in natural or domestic setting';
+    } else {
+      whatItIs = 'Animal subject expressing natural behavior and beauty';
+    }
     category = 'animal';
-  } else if (tags.includes('food') || tags.includes('meal') || tags.includes('dish')) {
-    whatItIs = 'Food or culinary creation';
+  } else if (tags.includes('food') || tags.includes('meal') || tags.includes('dish') || tags.includes('cooking')) {
+    if (tags.includes('meal')) {
+      whatItIs = 'Carefully prepared meal showcasing culinary artistry';
+    } else if (tags.includes('dish')) {
+      whatItIs = 'Gourmet dish presented with professional plating technique';
+    } else {
+      whatItIs = 'Culinary creation highlighting gastronomic excellence';
+    }
     category = 'food';
-  } else if (tags.includes('building') || tags.includes('house') || tags.includes('architecture')) {
-    whatItIs = 'Architectural structure';
+  } else if (tags.includes('building') || tags.includes('house') || tags.includes('architecture') || tags.includes('structure')) {
+    if (tags.includes('house')) {
+      whatItIs = 'Residential architecture displaying design and livability';
+    } else if (tags.includes('building')) {
+      whatItIs = 'Architectural structure demonstrating construction and form';
+    } else {
+      whatItIs = 'Built environment showcasing human design achievement';
+    }
     category = 'architecture';
-  } else if (tags.includes('flower') || tags.includes('tree') || tags.includes('plant') || tags.includes('nature')) {
-    whatItIs = 'Natural subject or botanical element';
+  } else if (tags.includes('flower') || tags.includes('tree') || tags.includes('plant') || tags.includes('nature') || tags.includes('landscape')) {
+    if (tags.includes('flower')) {
+      whatItIs = 'Botanical bloom displaying natural beauty and delicate form';
+    } else if (tags.includes('tree')) {
+      whatItIs = 'Majestic tree representing growth and natural strength';
+    } else if (tags.includes('landscape')) {
+      whatItIs = 'Natural landscape showcasing environmental beauty';
+    } else {
+      whatItIs = 'Natural element celebrating organic beauty and life';
+    }
     category = 'nature';
+  } else if (tags.includes('book') || tags.includes('text') || tags.includes('document')) {
+    whatItIs = 'Literary or informational content with textual elements';
+    category = 'document';
+  } else if (tags.includes('art') || tags.includes('painting') || tags.includes('drawing')) {
+    whatItIs = 'Artistic creation expressing creative vision and technique';
+    category = 'art';
+  } else if (tags.includes('tool') || tags.includes('equipment') || tags.includes('machine')) {
+    whatItIs = 'Functional tool or equipment designed for specific purpose';
+    category = 'tool';
+  } else {
+    // Try to infer from filename if no clear tags
+    const nameLower = name.toLowerCase();
+    if (nameLower.includes('portrait') || nameLower.includes('selfie') || nameLower.includes('photo')) {
+      whatItIs = 'Photographic composition with human or personal elements';
+      category = 'portrait';
+    } else if (nameLower.includes('landscape') || nameLower.includes('scenic')) {
+      whatItIs = 'Scenic composition capturing environmental beauty';
+      category = 'nature';
+    } else if (nameLower.includes('product') || nameLower.includes('item')) {
+      whatItIs = 'Product or object presented for documentation or display';
+      category = 'product';
+    } else {
+      whatItIs = 'Distinctive visual subject with unique characteristics and composition';
+      category = 'general';
+    }
   }
 
   // Extract colors from basic AI tags
@@ -541,16 +626,60 @@ function generateEnhancedAnalysisWithBasicAI(filename, imageBuffer, basicTags = 
       impression: 'Connection to nature and environmental harmony',
       style: 'Nature or landscape photography'
     },
+    document: {
+      main_colors: detectedColors.length > 0 ?
+        `Text-focused ${detectedColors.join(' and ')} with readable contrast` :
+        'High contrast colors optimized for readability',
+      background: backgroundColors.length > 0 ?
+        `Clean ${backgroundColors[0].replace(' background', '')} document layout` :
+        'Professional document presentation background',
+      atmosphere: 'Informative and organized with clear communication intent',
+      impression: 'Educational or informational content with structured presentation',
+      style: 'Document or informational photography'
+    },
+    art: {
+      main_colors: detectedColors.length > 0 ?
+        `Artistic ${detectedColors.join(', ')} expressing creative vision` :
+        'Rich artistic palette with expressive color relationships',
+      background: backgroundColors.length > 0 ?
+        `Gallery-quality ${backgroundColors[0].replace(' background', '')} presentation` :
+        'Museum or studio setting for artistic display',
+      atmosphere: 'Creative inspiration with artistic sophistication and depth',
+      impression: 'Cultural expression demonstrating human creativity and skill',
+      style: 'Fine art or creative documentation photography'
+    },
+    tool: {
+      main_colors: detectedColors.length > 0 ?
+        `Functional ${detectedColors.join(' and ')} emphasizing utility` :
+        'Practical colors highlighting functional design',
+      background: backgroundColors.length > 0 ?
+        `Workshop or ${backgroundColors[0].replace(' background', '')} working environment` :
+        'Professional workspace or technical setting',
+      atmosphere: 'Purposeful and efficient with focus on functionality',
+      impression: 'Human ingenuity in tool design and practical application',
+      style: 'Technical or product documentation photography'
+    },
+    product: {
+      main_colors: detectedColors.length > 0 ?
+        `Commercial ${detectedColors.join(', ')} designed for market appeal` :
+        'Market-focused colors with commercial appeal',
+      background: backgroundColors.length > 0 ?
+        `Professional ${backgroundColors[0].replace(' background', '')} product showcase` :
+        'Studio lighting optimized for product presentation',
+      atmosphere: 'Polished and appealing with commercial sophistication',
+      impression: 'Consumer appeal with emphasis on quality and desirability',
+      style: 'Commercial product photography'
+    },
     general: {
       main_colors: detectedColors.length > 0 ?
-        `Prominent ${detectedColors.join(', ')} with balanced color composition` :
-        'Balanced color palette with visual harmony',
+        `Distinctive ${detectedColors.join(', ')} creating visual impact` :
+        'Carefully selected color palette with intentional composition',
       background: backgroundColors.length > 0 ?
-        `${backgroundColors[0].replace(' background', '').charAt(0).toUpperCase() + backgroundColors[0].replace(' background', '').slice(1)} compositional setting` :
-        'Thoughtfully composed visual environment',
-      atmosphere: 'Engaging visual mood with purposeful presentation',
-      impression: 'Compelling visual narrative with artistic merit',
-      style: 'Contemporary digital photography'
+        `Purposeful ${backgroundColors[0].replace(' background', '')} environmental context` :
+        'Thoughtfully arranged compositional environment',
+      atmosphere: 'Engaging visual presence with deliberate artistic choices',
+      impression: 'Unique visual narrative demonstrating photographic skill',
+      style: 'Contemporary photography with professional composition'
     }
   };
 
