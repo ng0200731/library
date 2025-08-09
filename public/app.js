@@ -439,7 +439,21 @@ function showConfirmDialog(title, message, confirmText, onConfirm, cancelText = 
   confirmBtn.focus();
 }
 
-// AI Describe functionality
+// Global variable for the AI model
+let aiModel = null;
+
+// Load AI model on page load
+async function loadAIModel() {
+  try {
+    console.log('Loading AI vision model...');
+    aiModel = await mobilenet.load();
+    console.log('AI model loaded successfully');
+  } catch (error) {
+    console.error('Failed to load AI model:', error);
+  }
+}
+
+// AI Describe functionality using TensorFlow.js
 aiDescribeBtn.addEventListener('click', async () => {
   const file = fileInput.files && fileInput.files[0];
   if (!file) {
@@ -461,54 +475,59 @@ aiDescribeBtn.addEventListener('click', async () => {
   aiDescription.classList.remove('show');
 
   try {
-    const formData = new FormData();
-    formData.append('image', file);
+    // Load model if not already loaded
+    if (!aiModel) {
+      aiDescribeBtn.innerHTML = '🤖 Loading AI Model...';
+      await loadAIModel();
+    }
 
-    const response = await fetch('/api/describe-image', {
-      method: 'POST',
-      body: formData
+    if (!aiModel) {
+      throw new Error('AI model failed to load');
+    }
+
+    // Create image element for analysis
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    const imageLoadPromise = new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
+    // Load image from file
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 
-    const result = await response.json();
+    await imageLoadPromise;
 
-    // Display the AI description with source indicator
-    let displayText = result.description;
-    if (result.source === 'local_analysis') {
-      displayText += ' (Generated using local file analysis)';
-    } else if (result.source === 'ai_model') {
-      displayText += ' (Generated using AI vision model)';
-    } else if (result.source === 'fallback') {
-      displayText += ' (Basic file information)';
-    }
+    // Analyze image with AI model
+    aiDescribeBtn.innerHTML = '🤖 Recognizing Objects...';
+    const predictions = await aiModel.classify(img);
 
-    aiDescriptionText.textContent = displayText;
+    // Generate natural description from predictions
+    const description = generateNaturalDescription(predictions);
+
+    // Display the AI description
+    aiDescriptionText.textContent = `${description} (Generated using AI vision model)`;
     aiDescription.classList.add('show');
 
-    // Auto-add description as a tag if it's from AI model and not too long
-    if (result.source === 'ai_model') {
-      const description = result.description.toLowerCase();
-      if (description.length < 50 && !tags.includes(description)) {
-        tags.push(description);
+    // Auto-add top prediction as tag
+    if (predictions.length > 0) {
+      const topPrediction = predictions[0].className.toLowerCase();
+      const cleanTag = topPrediction.split(',')[0].trim(); // Take first part if comma-separated
+      if (!tags.includes(cleanTag)) {
+        tags.push(cleanTag);
         renderTags();
       }
     }
 
   } catch (error) {
     console.error('AI Description error:', error);
-    aiDescriptionText.textContent = 'AI service temporarily unavailable. Using basic file analysis instead.';
+    aiDescriptionText.textContent = 'AI analysis failed. Please try again or check your internet connection.';
     aiDescription.classList.add('show');
-
-    // Try to provide basic file info as fallback
-    if (file) {
-      const fileSize = Math.round(file.size / 1024);
-      const fileType = file.type.split('/')[1].toUpperCase();
-      const basicInfo = `${file.name} (${fileType}, ${fileSize}KB)`;
-      aiDescriptionText.textContent = `Basic file info: ${basicInfo}`;
-    }
   } finally {
     // Reset button state
     aiDescribeBtn.disabled = false;
@@ -517,7 +536,33 @@ aiDescribeBtn.addEventListener('click', async () => {
   }
 });
 
+// Generate natural language description from AI predictions
+function generateNaturalDescription(predictions) {
+  if (!predictions || predictions.length === 0) {
+    return 'Unable to identify objects in this image';
+  }
+
+  const topPrediction = predictions[0];
+  const confidence = Math.round(topPrediction.probability * 100);
+
+  if (predictions.length === 1 || confidence > 80) {
+    return `This image shows ${topPrediction.className.toLowerCase()} (${confidence}% confidence)`;
+  }
+
+  const secondPrediction = predictions[1];
+  const secondConfidence = Math.round(secondPrediction.probability * 100);
+
+  if (confidence > 50) {
+    return `This image appears to show ${topPrediction.className.toLowerCase()} (${confidence}% confidence), possibly ${secondPrediction.className.toLowerCase()} (${secondConfidence}% confidence)`;
+  } else {
+    return `This image might contain ${topPrediction.className.toLowerCase()} (${confidence}% confidence) or ${secondPrediction.className.toLowerCase()} (${secondConfidence}% confidence)`;
+  }
+}
+
 // Initial load
 search();
+
+// Load AI model in background
+loadAIModel();
 
 
