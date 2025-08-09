@@ -1155,14 +1155,31 @@ function addRelevantTags(detections, colorAnalysis) {
 // Load and display version
 async function loadVersion() {
   try {
+    console.log('Loading version from API...');
     const response = await fetch('/api/version');
+    console.log('Version API response status:', response.status);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
     const data = await response.json();
+    console.log('Version data received:', data);
+
     const versionBadge = document.getElementById('versionBadge');
     if (versionBadge && data.version) {
-      versionBadge.textContent = `v${data.version}`;
+      const newVersion = `v${data.version}`;
+      console.log('Updating version badge to:', newVersion);
+      versionBadge.textContent = newVersion;
+
+      // Add a visual indicator that it was updated
+      versionBadge.style.animation = 'pulse 0.5s ease-in-out';
+    } else {
+      console.log('Version badge element or version data not found');
     }
   } catch (error) {
-    console.log('Could not load version:', error);
+    console.error('Could not load version:', error);
+    // Keep the hardcoded version as fallback
   }
 }
 

@@ -38,6 +38,14 @@ h1 {
   text-transform: uppercase;
   box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* Version badge animation */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); box-shadow: 0 4px 16px rgba(139, 92, 246, 0.5); }
+  100% { transform: scale(1); }
 }
 
 h2 { margin: 24px 0 8px; font-size: 18px; color: #93c5fd; }
