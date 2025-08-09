@@ -154,6 +154,19 @@
         "hairy"
       ],
       "createdAt": "2025-08-09T14:19:02.736Z"
+    },
+    {
+      "id": "D-trl5-AsoJ1",
+      "filename": "1754751210346-Ecu7Cw06.jpg",
+      "originalName": "10022.jpg",
+      "url": "/uploads/1754751210346-Ecu7Cw06.jpg",
+      "tags": [
+        "person",
+        "silver",
+        "black",
+        "gray background"
+      ],
+      "createdAt": "2025-08-09T14:53:30.352Z"
     }
   ],
   "tags": [
@@ -181,6 +194,9 @@
     "sun",
     "doll",
     "chicken",
-    "hairy"
+    "hairy",
+    "person",
+    "silver",
+    "gray background"
   ]
 }

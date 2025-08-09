@@ -240,6 +240,7 @@ button:hover { background: #2563eb; }
   font-size: 14px;
   line-height: 1.5;
   display: none;
+  font-family: 'Courier New', monospace;
 }
 .ai-description.show {
   display: block;
@@ -254,6 +255,24 @@ button:hover { background: #2563eb; }
 }
 .ai-description .ai-text {
   color: #cbd5e1;
+  white-space: pre-line;
+}
+
+/* Performance metrics styling */
+.ai-description .ai-text::after {
+  content: "";
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #374151;
+}
+
+/* Highlight timing and cost info */
+.ai-description .ai-text {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #334155;
 }
 
 

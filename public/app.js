@@ -468,6 +468,11 @@ aiDescribeBtn.addEventListener('click', async () => {
     return;
   }
 
+  // Start timing
+  const startTime = performance.now();
+  let modelLoadTime = 0;
+  let analysisTime = 0;
+
   // Update button state
   aiDescribeBtn.disabled = true;
   aiDescribeBtn.classList.add('loading');
@@ -479,8 +484,10 @@ aiDescribeBtn.addEventListener('click', async () => {
   try {
     // Load models if not already loaded
     if (!classificationModel || !detectionModel) {
+      const modelLoadStart = performance.now();
       aiDescribeBtn.innerHTML = '🤖 Loading AI Models...';
       await loadAIModel();
+      modelLoadTime = performance.now() - modelLoadStart;
     }
 
     if (!classificationModel || !detectionModel) {
@@ -506,6 +513,8 @@ aiDescribeBtn.addEventListener('click', async () => {
     await imageLoadPromise;
 
     // Perform comprehensive image analysis
+    const analysisStart = performance.now();
+
     aiDescribeBtn.innerHTML = '🤖 Detecting Objects...';
     const detections = await detectionModel.detect(img);
 
@@ -515,11 +524,18 @@ aiDescribeBtn.addEventListener('click', async () => {
     aiDescribeBtn.innerHTML = '🤖 Classifying Scene...';
     const classifications = await classificationModel.classify(img);
 
+    analysisTime = performance.now() - analysisStart;
+
     // Generate comprehensive description
     const description = generateDetailedDescription(detections, colorAnalysis, classifications);
 
-    // Display the AI description
-    aiDescriptionText.textContent = description;
+    // Calculate total time and costs
+    const totalTime = performance.now() - startTime;
+    const costs = calculateAICosts(detections, colorAnalysis, classifications, totalTime);
+
+    // Display the AI description with timing and cost info
+    const fullDescription = `${description}\n\n⏱️ Processing: ${totalTime.toFixed(0)}ms${modelLoadTime > 0 ? ` (${modelLoadTime.toFixed(0)}ms model loading)` : ''}\n💰 Equivalent Cloud Cost: $${costs.total} (${costs.breakdown})\n🆓 Actual Cost: FREE (client-side processing)\n📊 Tokens Used: ${costs.tokens}`;
+    aiDescriptionText.textContent = fullDescription;
     aiDescription.classList.add('show');
 
     // Auto-add relevant tags
@@ -736,6 +752,46 @@ function generateDetailedDescription(detections, colorAnalysis, classifications)
   }
 
   return description;
+}
+
+// Calculate AI processing costs (simulated for client-side processing)
+function calculateAICosts(detections, colorAnalysis, classifications, processingTime) {
+  // Simulate token-based pricing similar to cloud AI services
+  // Note: Our client-side AI is actually FREE, but this shows equivalent cloud costs
+
+  let totalTokens = 0;
+  let breakdown = [];
+
+  // Object detection tokens (simulated)
+  const objectTokens = (detections?.length || 0) * 50; // 50 tokens per detected object
+  totalTokens += objectTokens;
+  if (objectTokens > 0) breakdown.push(`${objectTokens} object tokens`);
+
+  // Classification tokens (simulated)
+  const classificationTokens = (classifications?.length || 0) * 30; // 30 tokens per classification
+  totalTokens += classificationTokens;
+  if (classificationTokens > 0) breakdown.push(`${classificationTokens} classification tokens`);
+
+  // Color analysis tokens (simulated)
+  const colorTokens = (colorAnalysis?.dominant?.length || 0) * 10; // 10 tokens per color analyzed
+  totalTokens += colorTokens;
+  if (colorTokens > 0) breakdown.push(`${colorTokens} color tokens`);
+
+  // Base image processing tokens
+  const baseTokens = 100; // Base cost for image processing
+  totalTokens += baseTokens;
+  breakdown.push(`${baseTokens} base tokens`);
+
+  // Calculate cost at typical cloud AI pricing ($0.002 per 1K tokens)
+  const costPer1KTokens = 0.002;
+  const totalCost = (totalTokens / 1000) * costPer1KTokens;
+
+  return {
+    total: totalCost.toFixed(6),
+    tokens: totalTokens,
+    breakdown: breakdown.join(', '),
+    note: 'FREE (client-side processing)'
+  };
 }
 
 // Add relevant tags based on analysis
