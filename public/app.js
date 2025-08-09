@@ -16,6 +16,9 @@ const tagEditor = document.getElementById('tagEditor');
 const tagsHidden = document.getElementById('tags');
 const deleteAllBtn = document.getElementById('deleteAllBtn');
 const clearUploadTagsBtn = document.getElementById('clearUploadTagsBtn');
+const aiDescribeBtn = document.getElementById('aiDescribeBtn');
+const aiDescription = document.getElementById('aiDescription');
+const aiDescriptionText = document.getElementById('aiDescriptionText');
 let tags = [];
 
 // Search tag inputs and mode
@@ -34,8 +37,16 @@ function resetUploadUI(opts = {}) {
   renderTags();
   if (tagEditor) tagEditor.value = '';
   if (tagsHidden) tagsHidden.value = '';
-  // Reset status
+  // Reset status and AI description
   if (uploadStatus) uploadStatus.textContent = '';
+  if (aiDescription) aiDescription.classList.remove('show');
+  if (aiDescriptionText) aiDescriptionText.textContent = '';
+  // Reset AI button state
+  if (aiDescribeBtn) {
+    aiDescribeBtn.disabled = false;
+    aiDescribeBtn.classList.remove('loading');
+    aiDescribeBtn.innerHTML = '🤖 AI Describe';
+  }
   // Reset preview and input unless we want to keep the just-dropped preview
   if (!keepPreview) {
     if (dzPreview) { dzPreview.classList.add('hidden'); dzPreview.src = ''; }
@@ -427,6 +438,65 @@ function showConfirmDialog(title, message, confirmText, onConfirm, cancelText = 
   document.body.appendChild(dialog);
   confirmBtn.focus();
 }
+
+// AI Describe functionality
+aiDescribeBtn.addEventListener('click', async () => {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) {
+    alert('Please select an image first');
+    return;
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('Please select a valid image file');
+    return;
+  }
+
+  // Update button state
+  aiDescribeBtn.disabled = true;
+  aiDescribeBtn.classList.add('loading');
+  aiDescribeBtn.innerHTML = '🤖 Analyzing...';
+
+  // Hide previous description
+  aiDescription.classList.remove('show');
+
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch('/api/describe-image', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    // Display the AI description
+    aiDescriptionText.textContent = result.description;
+    aiDescription.classList.add('show');
+
+    // Auto-add description as a tag if it's not too long
+    const description = result.description.toLowerCase();
+    if (description.length < 50 && !tags.includes(description)) {
+      tags.push(description);
+      renderTags();
+    }
+
+  } catch (error) {
+    console.error('AI Description error:', error);
+    aiDescriptionText.textContent = 'Failed to generate description. Please try again.';
+    aiDescription.classList.add('show');
+  } finally {
+    // Reset button state
+    aiDescribeBtn.disabled = false;
+    aiDescribeBtn.classList.remove('loading');
+    aiDescribeBtn.innerHTML = '🤖 AI Describe';
+  }
+});
 
 // Initial load
 search();

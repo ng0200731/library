@@ -140,6 +140,46 @@ app.delete('/api/images/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// AI Image Description using Hugging Face BLIP model
+app.post('/api/describe-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Image file is required' });
+
+    // Read the uploaded image file
+    const imageBuffer = fs.readFileSync(req.file.path);
+
+    // Call Hugging Face Inference API
+    const response = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+      },
+      body: imageBuffer
+    });
+
+    if (!response.ok) {
+      throw new Error(`Hugging Face API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    // Clean up the temporary file
+    try { fs.unlinkSync(req.file.path); } catch {}
+
+    // Extract description from the result
+    const description = result[0]?.generated_text || 'Unable to generate description';
+
+    res.json({ description });
+  } catch (error) {
+    console.error('AI Description error:', error);
+    // Clean up the temporary file in case of error
+    if (req.file) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+    }
+    res.status(500).json({ error: 'Failed to generate AI description' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
