@@ -1152,11 +1152,13 @@ function addRelevantTags(detections, colorAnalysis) {
   renderTags();
 }
 
-// Load and display version
-async function loadVersion() {
+// Load and display version (make it globally accessible)
+window.loadVersion = async function() {
   try {
     console.log('Loading version from API...');
-    const response = await fetch('/api/version');
+    // Add cache-busting parameter
+    const cacheBuster = Date.now();
+    const response = await fetch(`/api/version?t=${cacheBuster}`);
     console.log('Version API response status:', response.status);
 
     if (!response.ok) {
@@ -1185,7 +1187,7 @@ async function loadVersion() {
 
 // Initial load
 search();
-loadVersion();
+window.loadVersion();
 
 // Load AI model in background
 loadAIModel();
