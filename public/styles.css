@@ -55,7 +55,99 @@ nav.tabs { display: flex; gap: 8px; }
 .tab-pane { }
 
 form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-input[type="text"] { flex: 1; min-width: 260px; padding: 8px 10px; border-radius: 8px; border: 1px solid #1f2937; background: #0f172a; color: #e5e7eb; }
+input[type="text"] {
+  flex: 1;
+  min-width: 260px;
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #1f2937;
+  background: #0f172a;
+  color: #e5e7eb;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2);
+}
+
+input[type="text"]::-webkit-scrollbar {
+  height: 4px;
+}
+
+input[type="text"]::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 2px;
+}
+
+input[type="text"]::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 2px;
+}
+
+input[type="text"]::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Specific styling for search tag input */
+#searchTagEditor {
+  min-width: 200px;
+  flex-grow: 1;
+  margin-right: 8px;
+}
+
+/* Search tags container */
+.search-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* Tag list styling */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Individual tag styling */
+.tag {
+  background: #1d4ed8;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.tag:hover {
+  background: #2563eb;
+}
+
+/* Clear button styling */
+.clear-btn {
+  background: #dc2626;
+  border-color: #dc2626;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.clear-btn:hover {
+  background: #ef4444;
+}
 input[type="file"] { color: #e5e7eb; }
 button { padding: 8px 12px; border-radius: 8px; border: 1px solid #1f2937; background: #1d4ed8; color: #fff; cursor: pointer; }
 button:hover { background: #2563eb; }
