@@ -571,9 +571,27 @@ async function search() {
     params.set('tags', searchTags.join(','));
     params.set('mode', searchMode);
   }
+
+  // Always fetch images - if no search tags, show all images
   const url = `/api/images${params.toString() ? `?${params.toString()}` : ''}`;
-  const data = await fetchJSON(url);
-  renderResults(data.images);
+
+  try {
+    const data = await fetchJSON(url);
+    renderResults(data.images || []);
+
+    // Update results header to show what we're displaying
+    const resultsHeader = document.querySelector('.results-header h2');
+    if (resultsHeader) {
+      if (searchTags.length === 0) {
+        resultsHeader.textContent = `All Images (${data.images ? data.images.length : 0})`;
+      } else {
+        resultsHeader.textContent = `Search Results (${data.images ? data.images.length : 0})`;
+      }
+    }
+  } catch (error) {
+    console.error('Search failed:', error);
+    renderResults([]);
+  }
 }
 
 function renderResults(images) {

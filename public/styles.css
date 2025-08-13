@@ -100,8 +100,46 @@ input[type="text"]::-webkit-scrollbar-thumb:hover {
 /* Specific styling for search tag input */
 #searchTagEditor {
   min-width: 200px;
+  max-width: 400px;
   flex-grow: 1;
   margin-right: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #1f2937;
+  background: #0f172a;
+  color: #e5e7eb;
+  font-size: 14px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+#searchTagEditor:focus {
+  outline: none;
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2);
+  overflow-x: auto;
+}
+
+#searchTagEditor::-webkit-scrollbar {
+  height: 3px;
+}
+
+#searchTagEditor::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 2px;
+}
+
+#searchTagEditor::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 2px;
+}
+
+#searchTagEditor::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
 }
 
 /* Search tags container */
