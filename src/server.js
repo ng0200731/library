@@ -45,7 +45,18 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 app.use('/uploads', express.static(uploadsDir));
-app.use('/', express.static(publicDir));
+
+// Serve static files with no-cache headers for development
+app.use('/', express.static(publicDir, {
+  setHeaders: (res, path) => {
+    // Force no cache for HTML, CSS, and JS files
+    if (path.endsWith('.html') || path.endsWith('.css') || path.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 // Get version information
 app.get('/api/version', (req, res) => {
