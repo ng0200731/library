@@ -183,7 +183,9 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
 
     // Get basic AI tags from request body if available
     const basicTags = req.body.basicTags ? req.body.basicTags.split(',') : [];
+    const ocrText = typeof req.body.ocrText === 'string' ? req.body.ocrText.trim() : '';
     console.log('Basic AI tags received:', basicTags);
+    if (ocrText) console.log('OCR text received (first 80 chars):', ocrText.slice(0, 80));
 
     let analysis = null;
 

@@ -439,6 +439,19 @@ window.advancedAnalyzeImage = async function(imageId) {
     }
   }
 
+  // Try free OCR (client-side) to capture any visible text in the image
+  let ocrText = '';
+  try {
+    if (window.Tesseract && imageData.preview) {
+      console.log('Running OCR with Tesseract.js...');
+      const { data } = await Tesseract.recognize(imageData.preview, 'eng', { logger: m => console.log(m) });
+      ocrText = (data && data.text ? data.text : '').trim();
+      console.log('OCR text:', ocrText);
+    }
+  } catch (err) {
+    console.warn('OCR failed:', err);
+  }
+
   try {
     const formData = new FormData();
     formData.append('image', imageData.file);
@@ -455,6 +468,11 @@ window.advancedAnalyzeImage = async function(imageId) {
       formData.append('basicTags', tagsString);
     } else {
       console.log('NO BASIC AI TAGS AVAILABLE - this might be the problem!');
+    }
+
+    // Include OCR text if any
+    if (ocrText) {
+      formData.append('ocrText', ocrText);
     }
 
     const response = await fetch('/api/advanced-analyze', {
