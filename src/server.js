@@ -194,6 +194,22 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
     // Option 0: Qwen2-VL (stronger VLM) via Hugging Face (token optional but recommended)
     try {
       console.log('Trying Hugging Face Qwen2-VL...');
+      // Build strict-JSON instruction with optional context
+      const contextParts = [];
+      if (basicTags.length) contextParts.push(`Basic tags: ${basicTags.join(', ')}`);
+      if (ocrText) contextParts.push(`OCR text: ${ocrText.slice(0, 300)}`);
+      const contextText = contextParts.length ? `\n\nContext:\n${contextParts.join('\n')}` : '';
+      const jsonInstruction = `You are a vision analysis engine. Return STRICT JSON only (no code fences) with exactly these keys:
+{
+  "what_it_is": string,
+  "main_colors": string,
+  "background": string,
+  "atmosphere": string,
+  "impression": string,
+  "style": string
+}
+Write specific, concrete phrases (no generic wording). One short sentence per field. main_colors as a short comma-separated list of plain color names or hex. No extra keys or text.${contextText}`;
+
       const qwenResp = await fetch('https://api-inference.huggingface.co/models/Qwen/Qwen2-VL-2B-Instruct', {
         method: 'POST',
         headers: hfHeaders('application/json'),
@@ -203,20 +219,36 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
               role: 'user',
               content: [
                 { type: 'image', image: `data:${req.file.mimetype};base64,${base64Image}` },
-                { type: 'text', text: 'Describe the image succinctly.' }
+                { type: 'text', text: jsonInstruction }
               ]
             }
           ],
-          parameters: { max_new_tokens: 200, temperature: 0.1 }
+          parameters: { max_new_tokens: 300, temperature: 0 }
         }),
-        signal: AbortSignal.timeout(18000)
+        signal: AbortSignal.timeout(20000)
       });
       if (qwenResp.ok) {
         const qwenJson = await qwenResp.json();
-        const text = Array.isArray(qwenJson) ? (qwenJson[0]?.generated_text || '') : (qwenJson.generated_text || qwenJson[0]?.generated_text || '');
-        if (text) {
-          analysis = parseDescriptionToStructured(text, basicTags);
-          console.log('Qwen2-VL analysis successful:', text);
+        const raw = Array.isArray(qwenJson) ? (qwenJson[0]?.generated_text || '') : (qwenJson.generated_text || qwenJson[0]?.generated_text || '');
+        if (raw) {
+          // Try to parse STRICT JSON; if parsing fails, fall back to heuristic parser
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+              analysis = {
+                what_it_is: String(parsed.what_it_is || '').trim() || 'Unknown subject',
+                main_colors: String(parsed.main_colors || '').trim() || 'Unknown colors',
+                background: String(parsed.background || '').trim() || 'Unknown background',
+                atmosphere: String(parsed.atmosphere || '').trim() || 'Neutral mood',
+                impression: String(parsed.impression || '').trim() || 'Visual description',
+                style: String(parsed.style || '').trim() || 'Photography',
+                source: 'qwen2-vl_json'
+              };
+            }
+          } catch (e) {
+            analysis = parseDescriptionToStructured(raw, basicTags);
+          }
+          console.log('Qwen2-VL analysis successful');
         }
       } else {
         console.log('Qwen2-VL request failed with status', qwenResp.status);
