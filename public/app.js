@@ -247,8 +247,11 @@ function renderImagesTable() {
               <div class="analysis-content">${imageData.advancedAnalysis.style}</div>
             </div>
           </div>` :
-          `<div id="advancedAnalysisPlaceholder_${imageData.id}"></div>`
+          `<div id="advancedAnalysisPlaceholder_${imageData.id}" class="advanced-placeholder">Source: pending</div>`
         }
+      </td>
+      <td class="table-source-cell">
+        ${imageData.advancedAnalysis ? `<span class="source-badge">${imageData.advancedSource || imageData.advancedAnalysis.source || 'unknown'}</span>` : ''}
       </td>
       <td class="tags-cell">
         <input type="text" class="manual-tags-input"
@@ -486,10 +489,11 @@ window.advancedAnalyzeImage = async function(imageId) {
 
     const result = await response.json();
 
-    // Update image data
+    // Update image data with source transparency
     imageData.advancedAnalysis = result.analysis;
+    imageData.advancedSource = result.source || result.analysis?.source || 'unknown';
 
-    // Re-render the table to show the analysis
+    // Re-render the table to show the analysis with source
     renderImagesTable();
 
   } catch (error) {
