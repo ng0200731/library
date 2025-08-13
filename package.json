@@ -1,6 +1,6 @@
 {
   "name": "library",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "",
   "main": "src/server.js",
   "type": "module",
