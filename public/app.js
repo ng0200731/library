@@ -61,6 +61,8 @@ tabs.forEach((t) => t.addEventListener('click', () => {
   } else {
     tabSearch.classList.remove('hidden');
     tabUpload.classList.add('hidden');
+    // Ensure results load when opening the Search tab
+    try { search(); } catch (e) { console.warn('Search init failed:', e); }
   }
 }));
 
