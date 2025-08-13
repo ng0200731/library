@@ -4,14 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Image Library</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=2.2.4" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
   </head>
   <body>
     <div class="container">
       <div class="header-section">
         <div class="header-left">
           <h1>Image Library</h1>
-          <span class="version-badge" id="versionBadge" onclick="loadVersion()" title="Click to refresh version">v2.2.2</span>
+          <span class="version-badge" id="versionBadge" onclick="window.loadVersion()" title="Click to refresh version">v2.2.4</span>
         </div>
         <nav class="tabs">
           <button class="tab active" data-tab="upload">Upload</button>
@@ -102,7 +105,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
-    <script src="/app.js"></script>
+    <script src="/app.js?v=2.2.4"></script>
   </body>
   </html>
 
