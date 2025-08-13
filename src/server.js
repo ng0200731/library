@@ -187,6 +187,29 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
     console.log('Basic AI tags received:', basicTags);
     if (ocrText) console.log('OCR text received (first 80 chars):', ocrText.slice(0, 80));
 
+    // Try free Places365 scene classification via Hugging Face (optional token)
+    let sceneLabels = [];
+    try {
+      console.log('Trying Places365 scene classification...');
+      const sceneResp = await fetch('https://api-inference.huggingface.co/models/zh-plus/ResNet-50-Places365', {
+        method: 'POST',
+        headers: hfHeaders('application/octet-stream'),
+        body: fs.readFileSync(req.file.path),
+        signal: AbortSignal.timeout(12000)
+      });
+      if (sceneResp.ok) {
+        const sceneJson = await sceneResp.json();
+        if (Array.isArray(sceneJson)) {
+          sceneLabels = sceneJson.slice(0, 3).map(x => x.label || '').filter(Boolean);
+          console.log('Scene labels:', sceneLabels);
+        }
+      } else {
+        console.log('Places365 request failed with status', sceneResp.status);
+      }
+    } catch (e) {
+      console.log('Places365 call failed:', e.message);
+    }
+
     let analysis = null;
 
     // Try multiple vision LLM APIs in order of preference (free)
@@ -208,7 +231,7 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
   "impression": string,
   "style": string
 }
-Write specific, concrete phrases (no generic wording). One short sentence per field. main_colors as a short comma-separated list of plain color names or hex. No extra keys or text.${contextText}`;
+Write specific, concrete phrases (no generic wording). One short sentence per field. main_colors as a short comma-separated list of plain color names or hex. No extra keys or text.${contextText}${sceneLabels.length ? `\n\nScene clues: ${sceneLabels.join(', ')}` : ''}`;
 
       const qwenResp = await fetch('https://api-inference.huggingface.co/models/Qwen/Qwen2-VL-2B-Instruct', {
         method: 'POST',
