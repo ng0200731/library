@@ -15,6 +15,14 @@ const __dirname = path.dirname(__filename);
 const packageJsonPath = path.join(__dirname, '..', 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
+// Hugging Face token for Inference API (optional, but recommended)
+const HF_TOKEN = process.env.HF_TOKEN || process.env.HUGGINGFACE_TOKEN || '';
+function hfHeaders(contentType = 'application/octet-stream') {
+  const headers = { 'Content-Type': contentType };
+  if (HF_TOKEN) headers['Authorization'] = `Bearer ${HF_TOKEN}`;
+  return headers;
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -179,16 +187,48 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
 
     let analysis = null;
 
-    // Try multiple real vision LLM APIs in order of preference
+    // Try multiple vision LLM APIs in order of preference (free)
 
-    // Option 1: Try Hugging Face BLIP-2 for image captioning
+    // Option 0: Qwen2-VL (stronger VLM) via Hugging Face (token optional but recommended)
+    try {
+      console.log('Trying Hugging Face Qwen2-VL...');
+      const qwenResp = await fetch('https://api-inference.huggingface.co/models/Qwen/Qwen2-VL-2B-Instruct', {
+        method: 'POST',
+        headers: hfHeaders('application/json'),
+        body: JSON.stringify({
+          inputs: [
+            {
+              role: 'user',
+              content: [
+                { type: 'image', image: `data:${req.file.mimetype};base64,${base64Image}` },
+                { type: 'text', text: 'Describe the image succinctly.' }
+              ]
+            }
+          ],
+          parameters: { max_new_tokens: 200, temperature: 0.1 }
+        }),
+        signal: AbortSignal.timeout(18000)
+      });
+      if (qwenResp.ok) {
+        const qwenJson = await qwenResp.json();
+        const text = Array.isArray(qwenJson) ? (qwenJson[0]?.generated_text || '') : (qwenJson.generated_text || qwenJson[0]?.generated_text || '');
+        if (text) {
+          analysis = parseDescriptionToStructured(text, basicTags);
+          console.log('Qwen2-VL analysis successful:', text);
+        }
+      } else {
+        console.log('Qwen2-VL request failed with status', qwenResp.status);
+      }
+    } catch (e) {
+      console.log('Qwen2-VL failed:', e.message);
+    }
+
+    // Option 1: BLIP-2 for image captioning
     try {
       console.log('Trying Hugging Face BLIP-2...');
       const blipResponse = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip2-opt-2.7b', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-        },
+        headers: hfHeaders('application/octet-stream'),
         body: imageBuffer,
         signal: AbortSignal.timeout(15000)
       });
@@ -211,9 +251,7 @@ app.post('/api/advanced-analyze', upload.single('image'), async (req, res) => {
         console.log('Trying Hugging Face BLIP...');
         const blipResponse = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/octet-stream',
-          },
+          headers: hfHeaders('application/octet-stream'),
           body: imageBuffer,
           signal: AbortSignal.timeout(15000)
         });
