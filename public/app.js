@@ -1212,8 +1212,8 @@ window.loadVersion = async function() {
   }
 }
 
-// Initial load
-search();
+// Initial load - land on Search with all images
+try { search(); } catch (e) { console.warn('Initial search failed:', e); }
 window.loadVersion();
 
 // Load AI model in background
