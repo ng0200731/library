@@ -566,6 +566,9 @@ function renderSearchTags() {
 }
 
 async function search() {
+  console.log('=== SEARCH FUNCTION CALLED ===');
+  console.log('Search tags:', searchTags);
+
   const params = new URLSearchParams();
   if (searchTags.length) {
     params.set('tags', searchTags.join(','));
@@ -574,9 +577,13 @@ async function search() {
 
   // Always fetch images - if no search tags, show all images
   const url = `/api/images${params.toString() ? `?${params.toString()}` : ''}`;
+  console.log('Fetching URL:', url);
 
   try {
     const data = await fetchJSON(url);
+    console.log('API Response:', data);
+    console.log('Images count:', data.images ? data.images.length : 'undefined');
+
     renderResults(data.images || []);
 
     // Update results header to show what we're displaying
